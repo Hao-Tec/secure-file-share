@@ -165,7 +165,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 👨‍💻 Author
 
-**Habeeb** - [GitHub Profile](https://github.com/YOUR_USERNAME)
+**Habeeb** - [GitHub Profile](https://github.com/Hao-Tec)
 
 ---
 
