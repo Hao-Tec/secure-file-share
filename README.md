@@ -23,19 +23,14 @@ A beautiful, secure file sharing application with AES-256 encryption. Upload fil
 
 ## 📸 Screenshots
 
-<details>
-<summary>Click to view screenshots</summary>
-
 ### Main Interface
-The modern dark-themed interface with upload and download sections.
-
-### File List
-View all your encrypted files with sizes and quick actions.
+![Main Interface](screenshots/main-interface.png)
+*The modern dark-themed interface with upload, file list, and download sections.*
 
 ### Password Strength Indicator
-Real-time feedback on password security.
+![Password Strength](screenshots/password-strength.png)
+*Real-time feedback on password security with visual strength bar.*
 
-</details>
 
 ## 🛠️ Installation
 
@@ -165,7 +160,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 👨‍💻 Author
 
-**Habeeb** - [GitHub Profile](https://github.com/Hao-Tec)
+**The TECHMASTER** - [GitHub Profile](https://github.com/Hao-Tec)
 
 ---
 
