@@ -1,0 +1,38 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+venv/
+env/
+.venv/
+ENV/
+
+# Environment variables (NEVER commit these!)
+.env
+.env.local
+.env.production
+
+# IDE settings
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Uploaded encrypted files (user data - don't commit)
+uploads/*.enc
+
+# Downloaded/decrypted files
+decrypted/
+download/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+Thumbs.db
+*.log
+
+# Test files
+*.enc
+download.jpg

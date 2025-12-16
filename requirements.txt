@@ -1,0 +1,10 @@
+# Secure File Share - Dependencies
+# Install with: pip install -r requirements.txt
+
+Flask>=2.3.0
+Flask-WTF>=1.2.0
+pycryptodome>=3.19.0
+python-dotenv>=1.0.0
+Werkzeug>=2.3.0
+gunicorn>=21.0.0
+
