@@ -19,17 +19,21 @@ A beautiful, secure file sharing application with AES-256 encryption. Upload fil
 
 ## 🚀 Live Demo
 
-**[Try it live on Render](https://secure-file-share.onrender.com)** *(Update this URL after deployment)*
+**[🔗 Try it live on Render](https://secure-file-share-jufq.onrender.com)**
 
 ## 📸 Screenshots
 
 ### Main Interface
-![Main Interface](screenshots/main-interface.png)
-*The modern dark-themed interface with upload, file list, and download sections.*
+<p align="center">
+  <img src="screenshots/main-interface.png" alt="Main Interface" width="700">
+</p>
+<p align="center"><em>The modern dark-themed interface with upload, file list, and download sections.</em></p>
 
 ### Password Strength Indicator
-![Password Strength](screenshots/password-strength.png)
-*Real-time feedback on password security with visual strength bar.*
+<p align="center">
+  <img src="screenshots/password-strength.png" alt="Password Strength" width="700">
+</p>
+<p align="center"><em>Real-time feedback on password security with visual strength bar.</em></p>
 
 
 ## 🛠️ Installation
@@ -133,16 +137,6 @@ secure-file-share/
    - `PYTHON_VERSION`: `3.11.0`
 
 5. **Deploy!** 🎉
-
-## 📝 API Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/` | Main page |
-| `POST` | `/upload` | Upload and encrypt file |
-| `POST` | `/download` | Download and decrypt file |
-| `GET` | `/api/files` | List all encrypted files |
-| `DELETE` | `/api/files/<filename>` | Delete encrypted file |
 
 ## 🤝 Contributing
 
