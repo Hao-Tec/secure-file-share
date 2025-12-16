@@ -47,7 +47,7 @@ Real-time feedback on password security.
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/YOUR_USERNAME/secure-file-share.git
+   git clone https://github.com/Hao-Tec/secure-file-share.git
    cd secure-file-share
    ```
 
