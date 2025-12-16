@@ -178,6 +178,14 @@ async function loadFiles() {
                     document.getElementById('password_dl').focus();
                     showToast('📝 Filename copied to download form!', true);
                 });
+
+                // Keyboard support for filename
+                row.querySelector('.file-name').addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        e.target.click();
+                    }
+                });
                 
                 // Copy button
                 row.querySelector('.copy-btn').addEventListener('click', async () => {
