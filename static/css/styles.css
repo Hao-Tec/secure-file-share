@@ -13,6 +13,15 @@
   --border-color: rgba(255, 255, 255, 0.1);
 }
 
+/* === Bootstrap Overrides === */
+.text-muted {
+  color: var(--text-muted) !important;
+}
+
+.text-secondary {
+  color: var(--text-secondary) !important;
+}
+
 [data-theme="light"] {
   --bg-primary: #f8fafc;
   --bg-secondary: #e2e8f0;
