@@ -12,6 +12,9 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
   </head>
   <body class="bg-light">
+    <!-- Skip to Content Link -->
+    <a href="#main-content" class="visually-hidden-focusable position-absolute top-0 start-0 p-3 bg-white text-dark text-decoration-none z-3 rounded-bottom-end">Skip to content</a>
+
     <!-- Theme Toggle Button -->
     <button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark/light mode" title="Toggle theme">
       <span class="theme-icon">🌙</span>
@@ -25,7 +28,7 @@
       </div>
     </div>
 
-    <div class="container mt-5">
+    <div class="container mt-5" id="main-content">
       <div class="text-center mb-4">
         <h1 class="fw-bold text-primary">🔐 Secure File Sharing Portal</h1>
         <p>Upload and download files safely with AES-256 encryption.</p>
