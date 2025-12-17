@@ -9,28 +9,27 @@ A beautiful, secure file sharing application with AES-256 encryption. Upload fil
 ## ✨ Features
 
 ### Core Security
-- **🔒 AES-256 Encryption** - Military-grade encryption for your files
-- **🔑 Password Protection** - Each file encrypted with a unique password
-- **🛡️ CSRF Protected** - Secure against cross-site request forgery
-- **⚡ Rate Limiting** - Prevents abuse (10 uploads/hr, 50 downloads/hr)
+- **🔒 AES-256 Encryption** - Military-grade encryption (AES-EAX mode) for your files
+- **🔑 Password Protection** - PBKDF2 key derivation with 100,000 iterations
+- **🛡️ Advanced Security Headers** - HSTS, CSP, X-Frame-Options, & X-Content-Type-Options
+- **⚡ Strict Rate Limiting** - Prevents abuse (5 uploads/hr, 20 downloads/hr)
 
 ### File Management
 - **📁 File Listing** - View all encrypted files with metadata
 - **⏰ Auto-Expiration** - Files auto-delete after 7 days
 - **📊 Download Counter** - Track how many times files are downloaded
-- **🔗 Shareable Links** - Generate unique share links for files
+- **🔗 Shareable Links** - Generate unique, secure share links
 
 ### User Experience
-- **🎨 Modern UI** - Glassmorphism design with smooth animations
-- **🌙 Dark/Light Mode** - Toggle theme with persistence
-- **📁 Drag & Drop** - Drop files anywhere to upload
-- **📱 Responsive** - Works on desktop, tablet, and mobile
-- **📊 Progress Tracking** - Real-time upload progress bar
-- **💪 Password Strength** - Visual indicator for password security
+- **🎨 Modern Glassmorphism UI** - Beautiful dark/light mode with smooth animations
+- **📁 Smart Drag & Drop** - Drop files anywhere with visual feedback
+- **📱 Fully Responsive** - Optimized for desktop, tablet, and mobile
+- **📊 Real-time Progress** - Upload progress bar and status feedback
+- **💪 Password Strength** - Visual indicator for password complexity
 
 ## 🚀 Live Demo
 
-**[🔗 Try it live on Render](https://secure-file-share-jufq.onrender.com)**
+**[🔗 Try it live on Render](https://secure-file-share.onrender.com)**
 
 ## 📸 Screenshots
 
@@ -38,13 +37,13 @@ A beautiful, secure file sharing application with AES-256 encryption. Upload fil
 <p align="center">
   <img src="screenshots/main-interface.png" alt="Main Interface" width="700">
 </p>
-<p align="center"><em>The modern dark-themed interface with upload, file list, and download sections.</em></p>
+<p align="center"><em>Modern dark-themed interface with drag & drop upload</em></p>
 
-### Password Strength Indicator
+### File Management
 <p align="center">
-  <img src="screenshots/password-strength.png" alt="Password Strength" width="700">
+  <img src="screenshots/file-list.png" alt="File List" width="700">
 </p>
-<p align="center"><em>Real-time feedback on password security with visual strength bar.</em></p>
+<p align="center"><em>Manage your encrypted files and download securely</em></p>
 
 
 ## 🛠️ Installation
@@ -74,8 +73,8 @@ A beautiful, secure file sharing application with AES-256 encryption. Upload fil
 
 4. **Set up environment variables**
    ```bash
+   # Create a .env file (or rename .env.example)
    cp .env.example .env
-   # Edit .env and set a strong SECRET_KEY
    ```
 
 5. **Run the application**
@@ -88,76 +87,30 @@ A beautiful, secure file sharing application with AES-256 encryption. Upload fil
    http://127.0.0.1:5000
    ```
 
-## 🔧 Configuration
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `SECRET_KEY` | Flask session secret (required in production) | `dev-fallback-key` |
-| `FLASK_ENV` | Environment: `development` or `production` | `development` |
-
-### Generate a secure secret key:
-```python
-python -c "import secrets; print(secrets.token_hex(32))"
-```
-
-## 🏗️ Project Structure
-
-```
-secure-file-share/
-├── app.py              # Main Flask application
-├── config.py           # Configuration settings
-├── requirements.txt    # Python dependencies
-├── .env.example        # Environment template
-├── templates/
-│   └── index.html      # Main HTML template
-├── static/
-│   ├── css/
-│   │   └── styles.css  # Custom styles
-│   └── js/
-│       └── script.js   # Frontend JavaScript
-└── uploads/            # Encrypted files (gitignored)
-```
-
-## 🔒 Security Features
+## 🔒 Security Architecture
 
 | Feature | Description |
 |---------|-------------|
-| **Unique Salt Per File** | Each file has its own 16-byte random salt |
-| **PBKDF2 Key Derivation** | 100,000 iterations for key stretching |
-| **AES-EAX Mode** | Authenticated encryption with integrity verification |
-| **CSRF Tokens** | Protection against cross-site request forgery |
-| **Password Validation** | Minimum 8 chars, mixed case, digits required |
-| **Path Traversal Prevention** | All filenames sanitized |
-| **File Size Limits** | Maximum 16MB uploads |
+| **Encryption** | AES-256 in EAX mode (Authenticated Encryption) |
+| **Key Derivation** | PBKDF2-HMAC-SHA256 with 100,000 rounds and random salt |
+| **Security Headers** | HSTS (Strict Transport Security), CSP (Content Security Policy), NoSniff, NoFrame |
+| **Rate Limiting** | Per-IP limiting for uploads (2/min, 5/hr) and downloads (5/min, 20/hr) |
+| **CSRF Protection** | Flask-WTF CSRF tokens on all forms |
+| **Input Validation** | Secure filename sanitization and path traversal prevention |
 
 ## 🚀 Deployment on Render
 
-1. **Push to GitHub** (see below)
-
-2. **Create Render account** at [render.com](https://render.com)
-
-3. **Create New Web Service**
-   - Connect your GitHub repository
-   - Environment: `Python 3`
-   - Build Command: `pip install -r requirements.txt`
-   - Start Command: `gunicorn app:app`
-
-4. **Set Environment Variables**
-   - `SECRET_KEY`: Generate a strong random key
+1. **Push to GitHub**
+2. **Create Web Service** on Render
+3. **Build Command:** `pip install -r requirements.txt`
+4. **Start Command:** `gunicorn app:app`
+5. **Environment Variables:**
+   - `SECRET_KEY`: (Large random string)
    - `FLASK_ENV`: `production`
-   - `PYTHON_VERSION`: `3.11.0`
-
-5. **Deploy!** 🎉
 
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
 
 ## 📄 License
 
@@ -168,7 +121,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 **The TECHMASTER** - [GitHub Profile](https://github.com/Hao-Tec)
 
 ---
-
 <p align="center">
   Made with ❤️ and 🔐 security in mind
 </p>
