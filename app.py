@@ -31,12 +31,14 @@ app.config['WTF_CSRF_TIME_LIMIT'] = config.WTF_CSRF_TIME_LIMIT
 # Initialize CSRF protection
 csrf = CSRFProtect(app)
 
-# Initialize rate limiter
+# Initialize rate limiter with strict enforcement
 limiter = Limiter(
     key_func=get_remote_address,
     app=app,
-    default_limits=["200 per day", "50 per hour"],
-    storage_uri="memory://"
+    default_limits=["100 per day", "30 per hour"],
+    storage_uri="memory://",
+    headers_enabled=True,  # Add rate limit headers to responses
+    swallow_errors=False   # Don't swallow errors, enforce limits strictly
 )
 
 # Ensure upload folder exists
@@ -230,7 +232,8 @@ def index():
 
 
 @app.route("/upload", methods=["POST"])
-@limiter.limit("10 per hour", error_message="Too many uploads. Please wait before uploading more files.")
+@limiter.limit("5 per hour", error_message="Too many uploads. Please wait before uploading more files.")
+@limiter.limit("2 per minute", error_message="Please wait a moment before uploading another file.")
 def upload():
     """Handle file upload with encryption."""
     if 'file' not in request.files:
@@ -283,7 +286,8 @@ def upload():
 
 
 @app.route("/download", methods=["POST"])
-@limiter.limit("50 per hour", error_message="Too many downloads. Please wait.")
+@limiter.limit("20 per hour", error_message="Too many downloads. Please wait.")
+@limiter.limit("5 per minute", error_message="Please wait a moment before downloading again.")
 def download():
     """Handle file download with decryption."""
     filename = request.form.get("filename", "")

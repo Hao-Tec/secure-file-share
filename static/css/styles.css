@@ -111,6 +111,10 @@ body {
 
 /* === Drag & Drop Zone === */
 .drop-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   border: 2px dashed var(--text-muted);
   border-radius: 1rem;
   padding: 2rem;
