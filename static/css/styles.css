@@ -1,3 +1,30 @@
+/* === CSS Variables for Theming === */
+:root {
+  --bg-primary: #0d1117;
+  --bg-secondary: #1f2937;
+  --bg-card: rgba(30, 41, 59, 0.95);
+  --bg-input: rgba(15, 23, 42, 0.8);
+  --text-primary: #ffffff;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --accent-primary: #60a5fa;
+  --accent-success: #22c55e;
+  --accent-danger: #ef4444;
+  --border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="light"] {
+  --bg-primary: #f8fafc;
+  --bg-secondary: #e2e8f0;
+  --bg-card: rgba(255, 255, 255, 0.95);
+  --bg-input: rgba(241, 245, 249, 0.9);
+  --text-primary: #1e293b;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --accent-primary: #3b82f6;
+  --border-color: rgba(0, 0, 0, 0.1);
+}
+
 /* === General Setup === */
 body {
   margin: 0;
@@ -7,13 +34,132 @@ body {
   background: linear-gradient(-45deg, #0d1117, #1f2937, #0f172a, #1e3a8a);
   background-size: 400% 400%;
   animation: gradientBG 15s ease infinite;
-  color: #ffffff;
+  color: var(--text-primary);
+  transition: background 0.3s ease;
+}
+
+[data-theme="light"] body {
+  background: linear-gradient(-45deg, #f8fafc, #e2e8f0, #f1f5f9, #dbeafe);
 }
 
 @keyframes gradientBG {
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
+}
+
+/* === Theme Toggle Button === */
+.theme-toggle {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1000;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.theme-toggle:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* === Drag & Drop Overlay === */
+.drop-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(59, 130, 246, 0.9);
+  z-index: 9999;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(8px);
+}
+
+.drop-overlay.active {
+  display: flex;
+}
+
+.drop-content {
+  text-align: center;
+  color: white;
+}
+
+.drop-icon {
+  font-size: 5rem;
+  display: block;
+  margin-bottom: 1rem;
+  animation: bounce 1s infinite;
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-20px); }
+}
+
+/* === Drag & Drop Zone === */
+.drop-zone {
+  border: 2px dashed var(--text-muted);
+  border-radius: 1rem;
+  padding: 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: var(--bg-input);
+}
+
+.drop-zone:hover,
+.drop-zone.drag-over {
+  border-color: var(--accent-primary);
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.drop-zone-input {
+  display: none;
+}
+
+.drop-zone-icon {
+  font-size: 3rem;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.drop-zone-text {
+  color: var(--text-secondary);
+  margin-bottom: 0.25rem;
+}
+
+/* === Selected File Display === */
+.selected-file {
+  display: flex;
+  align-items: center;
+  background: var(--bg-input);
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border-color);
+}
+
+.selected-file-icon {
+  font-size: 1.5rem;
+  margin-right: 0.75rem;
+}
+
+#selected-file-name {
+  flex: 1;
+  color: var(--text-secondary);
+  word-break: break-all;
 }
 
 /* === Container === */
@@ -24,25 +170,29 @@ body {
 /* === Header === */
 h1 {
   font-weight: 700;
-  color: #60a5fa;
+  color: var(--accent-primary);
   animation: fadeInUp 1s ease-in-out;
 }
 
 p {
-  color: #cbd5e1;
+  color: var(--text-secondary);
   animation: fadeInUp 1s ease-in-out;
 }
 
 /* === Cards === */
 .card {
   border-radius: 1rem;
-  background-color: rgba(30, 41, 59, 0.95);
+  background-color: var(--bg-card);
   backdrop-filter: blur(10px);
-  color: #e2e8f0;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
   animation: fadeInCard 0.8s ease-in-out;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+[data-theme="light"] .card {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 }
 
 .card:hover {
@@ -50,15 +200,23 @@ p {
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
 }
 
+[data-theme="light"] .card:hover {
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+}
+
 .card-header {
   background-color: rgba(15, 23, 42, 0.5);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid var(--border-color);
   border-radius: 1rem 1rem 0 0 !important;
   padding: 1rem 1.25rem;
 }
 
+[data-theme="light"] .card-header {
+  background-color: rgba(241, 245, 249, 0.8);
+}
+
 .card-header h5 {
-  color: #94a3b8;
+  color: var(--text-muted);
   font-weight: 600;
 }
 
@@ -108,17 +266,17 @@ p {
 }
 
 .btn-outline-primary {
-  color: #60a5fa;
-  border-color: #60a5fa;
+  color: var(--accent-primary);
+  border-color: var(--accent-primary);
 }
 
 .btn-outline-primary:hover {
-  background-color: #60a5fa;
+  background-color: var(--accent-primary);
   color: #0f172a;
 }
 
 .btn-outline-secondary {
-  color: #94a3b8;
+  color: var(--text-muted);
   border-color: #475569;
   background-color: transparent;
 }
@@ -140,33 +298,48 @@ p {
   border-color: #ef4444;
 }
 
+.btn-outline-info {
+  color: #38bdf8;
+  border-color: #38bdf8;
+}
+
+.btn-outline-info:hover {
+  background-color: #0284c7;
+  color: #ffffff;
+  border-color: #0284c7;
+}
+
 /* === Form Elements === */
 .form-control {
-  background-color: rgba(15, 23, 42, 0.8);
-  color: #ffffff;
+  background-color: var(--bg-input);
+  color: var(--text-primary);
   border: 1px solid #475569;
   border-radius: 8px;
   transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
+[data-theme="light"] .form-control {
+  border-color: #cbd5e1;
+}
+
 .form-control:focus {
-  background-color: rgba(15, 23, 42, 0.9);
-  color: #ffffff;
-  border-color: #60a5fa;
+  background-color: var(--bg-input);
+  color: var(--text-primary);
+  border-color: var(--accent-primary);
   box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
 }
 
 .form-control::placeholder {
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .form-label {
   font-weight: 500;
-  color: #cbd5e1;
+  color: var(--text-secondary);
 }
 
 .form-text {
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .input-group .form-control {
@@ -180,7 +353,7 @@ p {
 /* === Progress Bar === */
 .progress {
   height: 1.5rem;
-  background-color: rgba(15, 23, 42, 0.8);
+  background-color: var(--bg-input);
   border-radius: 8px;
   overflow: hidden;
 }
@@ -200,7 +373,7 @@ p {
 
 .strength-bar {
   height: 6px;
-  background-color: rgba(15, 23, 42, 0.8);
+  background-color: var(--bg-input);
   border-radius: 3px;
   overflow: hidden;
   margin-bottom: 0.25rem;
@@ -230,24 +403,30 @@ p {
 
 /* === File List Table === */
 .table {
-  color: #e2e8f0;
+  color: var(--text-secondary);
   margin-bottom: 0;
 }
 
 .table thead th {
   background-color: rgba(15, 23, 42, 0.5);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid var(--border-color);
   font-weight: 600;
-  color: #94a3b8;
-  padding: 0.75rem 1rem;
+  color: var(--text-muted);
+  padding: 0.75rem 0.5rem;
+  font-size: 0.875rem;
+}
+
+[data-theme="light"] .table thead th {
+  background-color: rgba(241, 245, 249, 0.8);
 }
 
 .table tbody td {
   background-color: transparent;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border-color);
+  padding: 0.75rem 0.5rem;
   vertical-align: middle;
-  color: #cbd5e1;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
 }
 
 .table-hover tbody tr:hover {
@@ -256,7 +435,7 @@ p {
 
 .file-name {
   cursor: pointer;
-  color: #60a5fa;
+  color: var(--accent-primary);
   transition: color 0.2s ease;
 }
 
@@ -265,15 +444,44 @@ p {
   text-decoration: underline;
 }
 
-.copy-btn {
+.copy-btn, .share-btn {
   padding: 0.25rem 0.5rem;
   font-size: 0.875rem;
-  opacity: 0.6;
+  opacity: 0.7;
   transition: opacity 0.2s ease;
 }
 
-.copy-btn:hover {
+.copy-btn:hover, .share-btn:hover {
   opacity: 1;
+}
+
+/* === Stat Box (Share Page) === */
+.stat-box {
+  padding: 1rem;
+  background: var(--bg-input);
+  border-radius: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.stat-icon {
+  font-size: 1.5rem;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.stat-value {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+/* === Badges === */
+.badge {
+  font-weight: 500;
+  font-size: 0.75rem;
 }
 
 /* === Toast Notifications === */
@@ -288,9 +496,9 @@ p {
 }
 
 .custom-toast {
-  background-color: rgba(30, 41, 59, 0.95);
+  background-color: var(--bg-card);
   backdrop-filter: blur(10px);
-  color: #ffffff;
+  color: var(--text-primary);
   padding: 1rem 1.5rem;
   border-radius: 12px;
   border-left: 4px solid transparent;
@@ -351,11 +559,11 @@ p {
 
 /* === Footer === */
 footer {
-  color: #cbd5e1;
+  color: var(--text-secondary);
 }
 
 footer small {
-  color: #94a3b8;
+  color: var(--text-muted);
 }
 
 /* === Responsive Design === */
@@ -377,6 +585,14 @@ footer small {
     padding: 1rem;
   }
   
+  .theme-toggle {
+    top: 0.5rem;
+    right: 0.5rem;
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
+  }
+  
   #toast-container {
     left: 1rem;
     right: 1rem;
@@ -389,13 +605,21 @@ footer small {
   
   .table thead th,
   .table tbody td {
-    padding: 0.5rem;
-    font-size: 0.875rem;
+    padding: 0.5rem 0.25rem;
+    font-size: 0.75rem;
   }
   
-  .delete-btn {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.75rem;
+  .delete-btn, .share-btn {
+    padding: 0.2rem 0.4rem;
+    font-size: 0.7rem;
+  }
+  
+  .drop-zone {
+    padding: 1.5rem;
+  }
+  
+  .drop-zone-icon {
+    font-size: 2rem;
   }
 }
 
@@ -424,7 +648,14 @@ footer small {
 }
 
 .btn:focus-visible,
-.form-control:focus-visible {
-  outline: 2px solid #60a5fa;
+.form-control:focus-visible,
+.theme-toggle:focus-visible {
+  outline: 2px solid var(--accent-primary);
   outline-offset: 2px;
+}
+
+.file-name:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
 }

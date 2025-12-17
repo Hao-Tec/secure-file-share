@@ -2,8 +2,13 @@
 import os
 import re
 import uuid
-from flask import Flask, request, render_template, send_file, jsonify
+import json
+import time
+from datetime import datetime, timedelta
+from flask import Flask, request, render_template, send_file, jsonify, abort
 from flask_wtf.csrf import CSRFProtect
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from Crypto.Cipher import AES
 from Crypto.Protocol.KDF import PBKDF2
 from Crypto.Random import get_random_bytes
@@ -26,21 +31,142 @@ app.config['WTF_CSRF_TIME_LIMIT'] = config.WTF_CSRF_TIME_LIMIT
 # Initialize CSRF protection
 csrf = CSRFProtect(app)
 
+# Initialize rate limiter
+limiter = Limiter(
+    key_func=get_remote_address,
+    app=app,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://"
+)
+
 # Ensure upload folder exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-# Constants for encryption
-SALT_LENGTH = 16  # 16 bytes = 128 bits
+# Constants
+SALT_LENGTH = 16
 NONCE_LENGTH = 16
 TAG_LENGTH = 16
+FILE_EXPIRY_DAYS = 7  # Files expire after 7 days
 
+
+# ==================== METADATA HELPERS ====================
+
+def get_metadata_path(enc_path: str) -> str:
+    """Get the metadata file path for an encrypted file."""
+    return enc_path + ".meta"
+
+
+def create_metadata(enc_path: str, original_filename: str) -> dict:
+    """Create metadata for a newly uploaded file."""
+    share_token = uuid.uuid4().hex[:12]  # 12 char share token
+    now = datetime.utcnow()
+    expires = now + timedelta(days=FILE_EXPIRY_DAYS)
+    
+    metadata = {
+        "original_name": original_filename,
+        "uploaded_at": now.isoformat() + "Z",
+        "expires_at": expires.isoformat() + "Z",
+        "downloads": 0,
+        "share_token": share_token
+    }
+    
+    meta_path = get_metadata_path(enc_path)
+    with open(meta_path, "w") as f:
+        json.dump(metadata, f)
+    
+    return metadata
+
+
+def load_metadata(enc_path: str) -> dict | None:
+    """Load metadata for a file, or return None if not found."""
+    meta_path = get_metadata_path(enc_path)
+    if os.path.exists(meta_path):
+        try:
+            with open(meta_path, "r") as f:
+                return json.load(f)
+        except (json.JSONDecodeError, IOError):
+            return None
+    return None
+
+
+def update_metadata(enc_path: str, updates: dict) -> bool:
+    """Update specific fields in metadata."""
+    metadata = load_metadata(enc_path)
+    if metadata:
+        metadata.update(updates)
+        meta_path = get_metadata_path(enc_path)
+        with open(meta_path, "w") as f:
+            json.dump(metadata, f)
+        return True
+    return False
+
+
+def increment_download_count(enc_path: str) -> int:
+    """Increment and return the download count."""
+    metadata = load_metadata(enc_path)
+    if metadata:
+        new_count = metadata.get("downloads", 0) + 1
+        update_metadata(enc_path, {"downloads": new_count})
+        return new_count
+    return 0
+
+
+def is_file_expired(metadata: dict) -> bool:
+    """Check if a file has expired."""
+    if not metadata or "expires_at" not in metadata:
+        return False
+    try:
+        expires = datetime.fromisoformat(metadata["expires_at"].replace("Z", ""))
+        return datetime.utcnow() > expires
+    except (ValueError, TypeError):
+        return False
+
+
+def get_time_remaining(metadata: dict) -> str:
+    """Get human-readable time remaining until expiry."""
+    if not metadata or "expires_at" not in metadata:
+        return "Unknown"
+    try:
+        expires = datetime.fromisoformat(metadata["expires_at"].replace("Z", ""))
+        remaining = expires - datetime.utcnow()
+        
+        if remaining.total_seconds() <= 0:
+            return "Expired"
+        
+        days = remaining.days
+        hours = remaining.seconds // 3600
+        
+        if days > 0:
+            return f"{days}d {hours}h"
+        elif hours > 0:
+            return f"{hours}h"
+        else:
+            minutes = remaining.seconds // 60
+            return f"{minutes}m"
+    except (ValueError, TypeError):
+        return "Unknown"
+
+
+def find_file_by_share_token(token: str) -> tuple[str, dict] | tuple[None, None]:
+    """Find a file by its share token. Returns (enc_path, metadata) or (None, None)."""
+    upload_folder = app.config['UPLOAD_FOLDER']
+    try:
+        with os.scandir(upload_folder) as entries:
+            for entry in entries:
+                if entry.name.endswith(".enc") and entry.is_file():
+                    enc_path = entry.path
+                    metadata = load_metadata(enc_path)
+                    if metadata and metadata.get("share_token") == token:
+                        return enc_path, metadata
+    except Exception:
+        pass
+    return None, None
+
+
+# ==================== VALIDATION HELPERS ====================
 
 def validate_password(password: str) -> tuple[bool, str]:
-    """Validate password meets security requirements.
-    
-    Returns:
-        Tuple of (is_valid, error_message)
-    """
+    """Validate password meets security requirements."""
     if len(password) < config.MIN_PASSWORD_LENGTH:
         return False, f"Password must be at least {config.MIN_PASSWORD_LENGTH} characters."
     
@@ -59,10 +185,12 @@ def validate_password(password: str) -> tuple[bool, str]:
 def allowed_file(filename: str) -> bool:
     """Check if the file extension is allowed."""
     if '.' not in filename:
-        return True  # Allow files without extension
+        return True
     extension = filename.rsplit('.', 1)[1].lower()
     return extension in config.ALLOWED_EXTENSIONS
 
+
+# ==================== ENCRYPTION HELPERS ====================
 
 def derive_key(password: str, salt: bytes) -> bytes:
     """Derive a 128-bit key from password and salt using PBKDF2."""
@@ -70,38 +198,30 @@ def derive_key(password: str, salt: bytes) -> bytes:
 
 
 def encrypt_file(file_data: bytes, password: str) -> bytes:
-    """Encrypt file data using AES-EAX mode with a unique salt.
-    
-    Output format: salt (16 bytes) + nonce (16 bytes) + tag (16 bytes) + ciphertext
-    """
-    # Generate unique salt for this file
+    """Encrypt file data using AES-EAX mode with a unique salt."""
     salt = get_random_bytes(SALT_LENGTH)
     key = derive_key(password, salt)
     
     cipher = AES.new(key, AES.MODE_EAX)
     ciphertext, tag = cipher.encrypt_and_digest(file_data)
     
-    # Prepend salt, nonce, and tag to ciphertext
     return salt + cipher.nonce + tag + ciphertext
 
 
 def decrypt_file(file_data: bytes, password: str) -> bytes:
-    """Decrypt file data that was encrypted with encrypt_file().
-    
-    Input format: salt (16 bytes) + nonce (16 bytes) + tag (16 bytes) + ciphertext
-    """
-    # Extract components
+    """Decrypt file data that was encrypted with encrypt_file()."""
     salt = file_data[:SALT_LENGTH]
     nonce = file_data[SALT_LENGTH:SALT_LENGTH + NONCE_LENGTH]
     tag = file_data[SALT_LENGTH + NONCE_LENGTH:SALT_LENGTH + NONCE_LENGTH + TAG_LENGTH]
     ciphertext = file_data[SALT_LENGTH + NONCE_LENGTH + TAG_LENGTH:]
     
-    # Derive key using the file's salt
     key = derive_key(password, salt)
     
     cipher = AES.new(key, AES.MODE_EAX, nonce)
     return cipher.decrypt_and_verify(ciphertext, tag)
 
+
+# ==================== ROUTES ====================
 
 @app.route("/")
 def index():
@@ -110,26 +230,21 @@ def index():
 
 
 @app.route("/upload", methods=["POST"])
+@limiter.limit("10 per hour", error_message="Too many uploads. Please wait before uploading more files.")
 def upload():
     """Handle file upload with encryption."""
-    # Check if file is in request
     if 'file' not in request.files:
         return jsonify({"success": False, "message": "❌ No file provided."}), 400
     
     file = request.files["file"]
     password = request.form.get("password", "")
     
-    # Validate file
     if not file or file.filename == '':
         return jsonify({"success": False, "message": "❌ No file selected."}), 400
     
     if not allowed_file(file.filename):
-        return jsonify({
-            "success": False, 
-            "message": "❌ File type not allowed."
-        }), 400
+        return jsonify({"success": False, "message": "❌ File type not allowed."}), 400
     
-    # Validate password
     is_valid, error_msg = validate_password(password)
     if not is_valid:
         return jsonify({"success": False, "message": f"❌ {error_msg}"}), 400
@@ -137,17 +252,13 @@ def upload():
     try:
         original_filename = secure_filename(file.filename)
         if not original_filename:
-            return jsonify({
-                "success": False, 
-                "message": "❌ Invalid filename."
-            }), 400
+            return jsonify({"success": False, "message": "❌ Invalid filename."}), 400
         
-        # Generate unique filename to prevent collisions
-        # Format: original_name_uuid8.ext.enc
+        # Generate unique filename
         name, ext = os.path.splitext(original_filename)
-        unique_id = uuid.uuid4().hex[:8]  # 8 character unique ID
+        unique_id = uuid.uuid4().hex[:8]
         unique_filename = f"{name}_{unique_id}{ext}"
-            
+        
         file_data = file.read()
         encrypted_data = encrypt_file(file_data, password)
         
@@ -155,46 +266,53 @@ def upload():
         with open(enc_path, "wb") as f:
             f.write(encrypted_data)
         
+        # Create metadata with share token and expiry
+        metadata = create_metadata(enc_path, original_filename)
+        share_url = f"/share/{metadata['share_token']}"
+        
         return jsonify({
             "success": True,
-            "message": f"✅ File uploaded and encrypted as '{unique_filename}'!",
-            "filename": unique_filename
+            "message": f"✅ File uploaded! Expires in {FILE_EXPIRY_DAYS} days.",
+            "filename": unique_filename,
+            "share_token": metadata["share_token"],
+            "share_url": share_url
         })
     except Exception as e:
         app.logger.error(f"Upload error: {e}")
-        return jsonify({
-            "success": False, 
-            "message": "❌ An error occurred during upload."
-        }), 500
+        return jsonify({"success": False, "message": "❌ An error occurred during upload."}), 500
 
 
 @app.route("/download", methods=["POST"])
+@limiter.limit("50 per hour", error_message="Too many downloads. Please wait.")
 def download():
     """Handle file download with decryption."""
     filename = request.form.get("filename", "")
     password = request.form.get("password", "")
     
     if not filename or not password:
-        return jsonify({
-            "success": False, 
-            "message": "❌ Filename and password are required."
-        }), 400
+        return jsonify({"success": False, "message": "❌ Filename and password are required."}), 400
     
-    # Sanitize filename to prevent path traversal
     safe_filename = secure_filename(filename)
     if not safe_filename:
-        return jsonify({
-            "success": False, 
-            "message": "❌ Invalid filename."
-        }), 400
+        return jsonify({"success": False, "message": "❌ Invalid filename."}), 400
     
     enc_path = os.path.join(app.config['UPLOAD_FOLDER'], safe_filename + ".enc")
     
     if not os.path.exists(enc_path):
-        return jsonify({
-            "success": False, 
-            "message": "❌ Encrypted file not found."
-        }), 404
+        return jsonify({"success": False, "message": "❌ Encrypted file not found."}), 404
+    
+    # Check expiration
+    metadata = load_metadata(enc_path)
+    if metadata and is_file_expired(metadata):
+        # Delete expired file
+        try:
+            os.remove(enc_path)
+            meta_path = get_metadata_path(enc_path)
+            if os.path.exists(meta_path):
+                os.remove(meta_path)
+        except Exception:
+            pass
+        return jsonify({"success": False, "message": "❌ This file has expired and been deleted."}), 410
     
     try:
         with open(enc_path, "rb") as f:
@@ -202,103 +320,137 @@ def download():
         
         decrypted_data = decrypt_file(encrypted_data, password)
         
+        # Increment download counter
+        increment_download_count(enc_path)
+        
         return send_file(
             BytesIO(decrypted_data),
             download_name=safe_filename,
             as_attachment=True
         )
     except ValueError:
-        # Decryption failed - wrong password or corrupted file
-        return jsonify({
-            "success": False,
-            "message": "❌ Decryption failed. Check your password and try again."
-        }), 400
+        return jsonify({"success": False, "message": "❌ Decryption failed. Check your password."}), 400
     except Exception as e:
         app.logger.error(f"Download error: {e}")
-        return jsonify({
-            "success": False,
-            "message": "❌ An error occurred during download."
-        }), 500
+        return jsonify({"success": False, "message": "❌ An error occurred during download."}), 500
+
+
+@app.route("/share/<token>")
+def share_page(token):
+    """Render a share page for a specific file."""
+    enc_path, metadata = find_file_by_share_token(token)
+    
+    if not enc_path or not metadata:
+        abort(404)
+    
+    if is_file_expired(metadata):
+        # Clean up expired file
+        try:
+            os.remove(enc_path)
+            meta_path = get_metadata_path(enc_path)
+            if os.path.exists(meta_path):
+                os.remove(meta_path)
+        except Exception:
+            pass
+        abort(410)  # Gone
+    
+    # Get display filename from path
+    filename = os.path.basename(enc_path)[:-4]  # Remove .enc
+    time_remaining = get_time_remaining(metadata)
+    
+    return render_template("share.html", 
+                         filename=filename, 
+                         time_remaining=time_remaining,
+                         downloads=metadata.get("downloads", 0))
 
 
 @app.route("/api/files", methods=["GET"])
 def list_files():
-    """List all encrypted files."""
+    """List all encrypted files with metadata."""
     try:
         files = []
         upload_folder = app.config['UPLOAD_FOLDER']
+        now = datetime.utcnow()
         
-        # Optimize: Use os.scandir for faster directory iteration
-        # This avoids separate os.stat calls for each file where possible
         with os.scandir(upload_folder) as entries:
             for entry in entries:
                 if entry.name.endswith(".enc") and entry.is_file():
+                    enc_path = entry.path
                     stat = entry.stat()
-
-                    # Remove .enc extension for display
+                    metadata = load_metadata(enc_path)
+                    
+                    # Skip and delete expired files
+                    if metadata and is_file_expired(metadata):
+                        try:
+                            os.remove(enc_path)
+                            meta_path = get_metadata_path(enc_path)
+                            if os.path.exists(meta_path):
+                                os.remove(meta_path)
+                        except Exception:
+                            pass
+                        continue
+                    
                     display_name = entry.name[:-4]
-
-                    files.append({
+                    
+                    file_info = {
                         "name": display_name,
                         "size": stat.st_size,
-                        "modified": stat.st_mtime
-                    })
+                        "modified": stat.st_mtime,
+                        "downloads": metadata.get("downloads", 0) if metadata else 0,
+                        "expires_in": get_time_remaining(metadata) if metadata else "Unknown",
+                        "share_token": metadata.get("share_token") if metadata else None
+                    }
+                    files.append(file_info)
         
-        # Sort by modification time (newest first)
         files.sort(key=lambda x: x['modified'], reverse=True)
         
         return jsonify({"success": True, "files": files})
     except Exception as e:
         app.logger.error(f"List files error: {e}")
-        return jsonify({
-            "success": False, 
-            "message": "❌ Could not retrieve file list."
-        }), 500
+        return jsonify({"success": False, "message": "❌ Could not retrieve file list."}), 500
 
 
 @app.route("/api/files/<filename>", methods=["DELETE"])
 def delete_file(filename):
-    """Delete an encrypted file."""
-    # Sanitize filename
+    """Delete an encrypted file and its metadata."""
     safe_filename = secure_filename(filename)
     if not safe_filename:
-        return jsonify({
-            "success": False, 
-            "message": "❌ Invalid filename."
-        }), 400
+        return jsonify({"success": False, "message": "❌ Invalid filename."}), 400
     
     enc_path = os.path.join(app.config['UPLOAD_FOLDER'], safe_filename + ".enc")
+    meta_path = get_metadata_path(enc_path)
     
     if not os.path.exists(enc_path):
-        return jsonify({
-            "success": False, 
-            "message": "❌ File not found."
-        }), 404
+        return jsonify({"success": False, "message": "❌ File not found."}), 404
     
     try:
         os.remove(enc_path)
-        return jsonify({
-            "success": True,
-            "message": "✅ File deleted successfully."
-        })
+        if os.path.exists(meta_path):
+            os.remove(meta_path)
+        return jsonify({"success": True, "message": "✅ File deleted successfully."})
     except Exception as e:
         app.logger.error(f"Delete error: {e}")
-        return jsonify({
-            "success": False,
-            "message": "❌ Could not delete file."
-        }), 500
+        return jsonify({"success": False, "message": "❌ Could not delete file."}), 500
 
 
 @app.errorhandler(413)
 def request_entity_too_large(error):
     """Handle file too large error."""
     max_size_mb = app.config['MAX_CONTENT_LENGTH'] // (1024 * 1024)
-    return jsonify({
-        "success": False,
-        "message": f"❌ File too large. Maximum size is {max_size_mb}MB."
-    }), 413
+    return jsonify({"success": False, "message": f"❌ File too large. Maximum size is {max_size_mb}MB."}), 413
+
+
+@app.errorhandler(429)
+def rate_limit_exceeded(error):
+    """Handle rate limit exceeded error."""
+    return jsonify({"success": False, "message": "❌ Too many requests. Please slow down."}), 429
+
+
+@app.errorhandler(410)
+def gone(error):
+    """Handle expired resource error."""
+    return render_template("expired.html"), 410
 
 
 if __name__ == "__main__":
-    # Use config.DEBUG instead of hardcoded debug=True
     app.run(debug=config.DEBUG, host='127.0.0.1', port=5000)

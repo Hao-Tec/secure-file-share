@@ -1,17 +1,155 @@
 /**
  * Secure File Share - Frontend JavaScript
- * Handles file upload/download, file listing, and UI interactions
+ * Handles file upload/download, file listing, drag & drop, theme toggle, and UI interactions
  */
 
 // Get CSRF token from meta tag
 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
 
+// Store selected file for upload
+let selectedFile = null;
+
+// ================== THEME TOGGLE ==================
+const themeToggle = document.getElementById('theme-toggle');
+const themeIcon = themeToggle?.querySelector('.theme-icon');
+const html = document.documentElement;
+
+// Load saved theme
+const savedTheme = localStorage.getItem('theme') || 'dark';
+html.setAttribute('data-theme', savedTheme);
+updateThemeIcon(savedTheme);
+
+themeToggle?.addEventListener('click', () => {
+    const currentTheme = html.getAttribute('data-theme');
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    
+    html.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+    updateThemeIcon(newTheme);
+});
+
+function updateThemeIcon(theme) {
+    if (themeIcon) {
+        themeIcon.textContent = theme === 'dark' ? '🌙' : '☀️';
+    }
+}
+
+// ================== DRAG & DROP ==================
+const dropZone = document.getElementById('drop-zone');
+const dropOverlay = document.getElementById('drop-overlay');
+const fileInput = document.getElementById('file');
+const selectedFileEl = document.getElementById('selected-file');
+const selectedFileName = document.getElementById('selected-file-name');
+const clearFileBtn = document.getElementById('clear-file');
+
+// Prevent default drag behaviors on document
+['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    document.body.addEventListener(eventName, preventDefaults, false);
+});
+
+function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+}
+
+// Show overlay when dragging over document
+document.body.addEventListener('dragenter', () => {
+    dropOverlay?.classList.add('active');
+});
+
+dropOverlay?.addEventListener('dragleave', (e) => {
+    // Only hide if leaving the overlay itself
+    if (e.target === dropOverlay) {
+        dropOverlay.classList.remove('active');
+    }
+});
+
+dropOverlay?.addEventListener('drop', (e) => {
+    dropOverlay.classList.remove('active');
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        handleFileSelect(files[0]);
+    }
+});
+
+// Drop zone click to open file picker
+dropZone?.addEventListener('click', () => {
+    fileInput?.click();
+});
+
+// Drop zone drag events
+dropZone?.addEventListener('dragover', () => {
+    dropZone.classList.add('drag-over');
+});
+
+dropZone?.addEventListener('dragleave', () => {
+    dropZone.classList.remove('drag-over');
+});
+
+dropZone?.addEventListener('drop', (e) => {
+    dropZone.classList.remove('drag-over');
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        handleFileSelect(files[0]);
+    }
+});
+
+// File input change
+fileInput?.addEventListener('change', (e) => {
+    if (e.target.files.length > 0) {
+        handleFileSelect(e.target.files[0]);
+    }
+});
+
+// Clear file button
+clearFileBtn?.addEventListener('click', () => {
+    clearSelectedFile();
+});
+
+function handleFileSelect(file) {
+    // Check file size (16MB max)
+    const maxSize = 16 * 1024 * 1024;
+    if (file.size > maxSize) {
+        showToast('❌ File too large. Maximum size is 16MB.', false);
+        return;
+    }
+    
+    selectedFile = file;
+    
+    // Update UI
+    if (selectedFileEl && selectedFileName) {
+        selectedFileName.textContent = `${file.name} (${formatFileSize(file.size)})`;
+        selectedFileEl.style.display = 'flex';
+    }
+    
+    // Hide drop zone
+    if (dropZone) {
+        dropZone.style.display = 'none';
+    }
+}
+
+function clearSelectedFile() {
+    selectedFile = null;
+    if (fileInput) fileInput.value = '';
+    if (selectedFileEl) selectedFileEl.style.display = 'none';
+    if (dropZone) dropZone.style.display = 'flex';
+}
+
 // ================== UPLOAD HANDLING ==================
-document.getElementById('upload-form').addEventListener('submit', async function(e) {
+document.getElementById('upload-form')?.addEventListener('submit', async function(e) {
     e.preventDefault();
     
+    if (!selectedFile) {
+        showToast('❌ Please select a file first.', false);
+        return;
+    }
+    
     const form = e.target;
-    const formData = new FormData(form);
+    const formData = new FormData();
+    formData.append('csrf_token', csrfToken);
+    formData.append('file', selectedFile);
+    formData.append('password', document.getElementById('password').value);
+    
     const uploadBtn = document.getElementById('upload-btn');
     const progressContainer = document.getElementById('upload-progress-container');
     const progressBar = document.getElementById('upload-progress');
@@ -30,7 +168,6 @@ document.getElementById('upload-form').addEventListener('submit', async function
     progressContainer.style.display = 'block';
     setButtonLoading(uploadBtn, true);
     
-    // Use XMLHttpRequest for progress tracking
     const xhr = new XMLHttpRequest();
     
     xhr.upload.addEventListener('progress', (e) => {
@@ -49,13 +186,25 @@ document.getElementById('upload-form').addEventListener('submit', async function
         
         try {
             const result = JSON.parse(xhr.responseText);
-            showToast(result.message, result.success);
             
             if (result.success) {
+                // Show success with share link option
+                showToast(result.message, true);
+                
+                // Show share link if available
+                if (result.share_url) {
+                    setTimeout(() => {
+                        const fullShareUrl = window.location.origin + result.share_url;
+                        showToast(`📋 Share link: ${result.filename}`, true);
+                    }, 1500);
+                }
+                
                 form.reset();
+                clearSelectedFile();
                 resetPasswordStrength();
-                loadFiles(); // Refresh file list
+                loadFiles();
             } else {
+                showToast(result.message, false);
                 triggerShake(uploadCard);
             }
         } catch {
@@ -77,7 +226,7 @@ document.getElementById('upload-form').addEventListener('submit', async function
 });
 
 // ================== DOWNLOAD HANDLING ==================
-document.getElementById('download-form').addEventListener('submit', async function(e) {
+document.getElementById('download-form')?.addEventListener('submit', async function(e) {
     e.preventDefault();
     
     const form = e.target;
@@ -90,9 +239,7 @@ document.getElementById('download-form').addEventListener('submit', async functi
     try {
         const response = await fetch('/download', {
             method: 'POST',
-            headers: {
-                'X-CSRFToken': csrfToken
-            },
+            headers: { 'X-CSRFToken': csrfToken },
             body: formData
         });
         
@@ -102,7 +249,6 @@ document.getElementById('download-form').addEventListener('submit', async functi
             const result = await response.json();
             showToast(result.message, result.success);
         } else {
-            // File blob received
             const blob = await response.blob();
             
             if (blob.size === 0) {
@@ -136,19 +282,17 @@ async function loadFiles() {
     const listEl = document.getElementById('files-list');
     const tbody = document.getElementById('files-tbody');
     
-    loadingEl.style.display = 'block';
-    emptyEl.style.display = 'none';
-    listEl.style.display = 'none';
+    if (loadingEl) loadingEl.style.display = 'block';
+    if (emptyEl) emptyEl.style.display = 'none';
+    if (listEl) listEl.style.display = 'none';
     
     try {
         const response = await fetch('/api/files', {
-            headers: {
-                'X-CSRFToken': csrfToken
-            }
+            headers: { 'X-CSRFToken': csrfToken }
         });
         const result = await response.json();
         
-        loadingEl.style.display = 'none';
+        if (loadingEl) loadingEl.style.display = 'none';
         
         if (result.success && result.files.length > 0) {
             tbody.innerHTML = '';
@@ -160,35 +304,26 @@ async function loadFiles() {
                         <span class="file-name" role="button" tabindex="0" title="Click to fill download form">
                             📄 ${escapeHtml(file.name)}
                         </span>
-                        <button class="btn btn-sm btn-link copy-btn" title="Copy filename" aria-label="Copy filename">
-                            📋
-                        </button>
+                        <button class="btn btn-sm btn-link copy-btn p-0 ms-1" title="Copy filename">📋</button>
                     </td>
                     <td>${formatFileSize(file.size)}</td>
+                    <td><span class="badge bg-secondary">${file.downloads || 0}</span></td>
+                    <td><span class="badge ${file.expires_in === 'Expired' ? 'bg-danger' : 'bg-warning text-dark'}">${file.expires_in || 'Unknown'}</span></td>
                     <td>
-                        <button class="btn btn-sm btn-outline-danger delete-btn" data-filename="${escapeHtml(file.name)}" aria-label="Delete file">
-                            🗑️ Delete
-                        </button>
+                        ${file.share_token ? `<button class="btn btn-sm btn-outline-info share-btn me-1" data-token="${escapeHtml(file.share_token)}" title="Copy share link">🔗</button>` : ''}
+                        <button class="btn btn-sm btn-outline-danger delete-btn" data-filename="${escapeHtml(file.name)}" title="Delete file">🗑️</button>
                     </td>
                 `;
                 
                 // Click filename to fill download form
-                row.querySelector('.file-name').addEventListener('click', () => {
+                row.querySelector('.file-name')?.addEventListener('click', () => {
                     document.getElementById('filename').value = file.name;
-                    document.getElementById('password_dl').focus();
+                    document.getElementById('password_dl')?.focus();
                     showToast('📝 Filename copied to download form!', true);
                 });
-
-                // Keyboard support for filename
-                row.querySelector('.file-name').addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        e.target.click();
-                    }
-                });
                 
-                // Copy button
-                row.querySelector('.copy-btn').addEventListener('click', async () => {
+                // Copy filename button
+                row.querySelector('.copy-btn')?.addEventListener('click', async () => {
                     try {
                         await navigator.clipboard.writeText(file.name);
                         showToast('📋 Filename copied to clipboard!', true);
@@ -197,10 +332,22 @@ async function loadFiles() {
                     }
                 });
                 
+                // Share link button
+                row.querySelector('.share-btn')?.addEventListener('click', async (evt) => {
+                    const token = evt.target.dataset.token;
+                    const shareUrl = `${window.location.origin}/share/${token}`;
+                    try {
+                        await navigator.clipboard.writeText(shareUrl);
+                        showToast('🔗 Share link copied to clipboard!', true);
+                    } catch {
+                        showToast('❌ Could not copy share link.', false);
+                    }
+                });
+                
                 // Delete button
-                row.querySelector('.delete-btn').addEventListener('click', async (evt) => {
+                row.querySelector('.delete-btn')?.addEventListener('click', async (evt) => {
                     const filename = evt.target.dataset.filename;
-                    if (confirm(`Are you sure you want to delete "${filename}"? This cannot be undone.`)) {
+                    if (confirm(`Delete "${filename}"? This cannot be undone.`)) {
                         await deleteFile(filename);
                     }
                 });
@@ -208,12 +355,12 @@ async function loadFiles() {
                 tbody.appendChild(row);
             });
             
-            listEl.style.display = 'block';
+            if (listEl) listEl.style.display = 'block';
         } else {
-            emptyEl.style.display = 'block';
+            if (emptyEl) emptyEl.style.display = 'block';
         }
     } catch {
-        loadingEl.style.display = 'none';
+        if (loadingEl) loadingEl.style.display = 'none';
         showToast('❌ Could not load file list.', false);
     }
 }
@@ -222,15 +369,13 @@ async function deleteFile(filename) {
     try {
         const response = await fetch(`/api/files/${encodeURIComponent(filename)}`, {
             method: 'DELETE',
-            headers: {
-                'X-CSRFToken': csrfToken
-            }
+            headers: { 'X-CSRFToken': csrfToken }
         });
         const result = await response.json();
         showToast(result.message, result.success);
         
         if (result.success) {
-            loadFiles(); // Refresh list
+            loadFiles();
         }
     } catch {
         showToast('❌ Could not delete file.', false);
@@ -238,7 +383,7 @@ async function deleteFile(filename) {
 }
 
 // Refresh button
-document.getElementById('refresh-files').addEventListener('click', loadFiles);
+document.getElementById('refresh-files')?.addEventListener('click', loadFiles);
 
 // ================== PASSWORD VALIDATION ==================
 function validatePassword(password) {
@@ -261,12 +406,13 @@ function validatePassword(password) {
 const passwordInput = document.getElementById('password');
 const strengthIndicator = document.getElementById('password-strength');
 
-passwordInput.addEventListener('input', function() {
-    const password = this.value;
-    updatePasswordStrength(password);
+passwordInput?.addEventListener('input', function() {
+    updatePasswordStrength(this.value);
 });
 
 function updatePasswordStrength(password) {
+    if (!strengthIndicator) return;
+    
     if (!password) {
         strengthIndicator.innerHTML = '';
         return;
@@ -306,7 +452,7 @@ function updatePasswordStrength(password) {
 }
 
 function resetPasswordStrength() {
-    strengthIndicator.innerHTML = '';
+    if (strengthIndicator) strengthIndicator.innerHTML = '';
 }
 
 // ================== PASSWORD VISIBILITY TOGGLE ==================
@@ -328,6 +474,8 @@ document.querySelectorAll('.toggle-password').forEach(btn => {
 // ================== UI UTILITIES ==================
 function showToast(message, success = true) {
     const container = document.getElementById('toast-container');
+    if (!container) return;
+    
     container.innerHTML = '';
     
     const toast = document.createElement('div');
@@ -339,6 +487,8 @@ function showToast(message, success = true) {
 }
 
 function setButtonLoading(btn, loading) {
+    if (!btn) return;
+    
     const text = btn.querySelector('.btn-text');
     const spinner = btn.querySelector('.spinner-border');
     
@@ -354,8 +504,9 @@ function setButtonLoading(btn, loading) {
 }
 
 function triggerShake(element) {
+    if (!element) return;
     element.classList.remove('upload-error-shake');
-    void element.offsetWidth; // Force reflow
+    void element.offsetWidth;
     element.classList.add('upload-error-shake');
     setTimeout(() => element.classList.remove('upload-error-shake'), 500);
 }
@@ -375,4 +526,6 @@ function escapeHtml(text) {
 }
 
 // ================== INITIALIZATION ==================
-document.addEventListener('DOMContentLoaded', loadFiles);
+document.addEventListener('DOMContentLoaded', () => {
+    loadFiles();
+});

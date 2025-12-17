@@ -1,6 +1,6 @@
 <!-- templates/index.html -->
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -12,25 +12,52 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
   </head>
   <body class="bg-light">
+    <!-- Theme Toggle Button -->
+    <button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark/light mode" title="Toggle theme">
+      <span class="theme-icon">🌙</span>
+    </button>
+
+    <!-- Drag & Drop Overlay -->
+    <div id="drop-overlay" class="drop-overlay">
+      <div class="drop-content">
+        <span class="drop-icon">📁</span>
+        <p>Drop file here to upload</p>
+      </div>
+    </div>
+
     <div class="container mt-5">
       <div class="text-center mb-4">
         <h1 class="fw-bold text-primary">🔐 Secure File Sharing Portal</h1>
         <p>Upload and download files safely with AES-256 encryption.</p>
+        <small class="text-muted">Files expire after 7 days • Max 16MB • Rate limited</small>
       </div>
 
-      <!-- Upload Section -->
+      <!-- Upload Section with Drag & Drop -->
       <div class="card shadow-sm mb-4" id="upload-card">
         <div class="card-header">
           <h5 class="mb-0">📤 Upload & Encrypt</h5>
         </div>
         <div class="card-body">
+          <!-- Drag & Drop Zone -->
+          <div id="drop-zone" class="drop-zone mb-3">
+            <div class="drop-zone-content">
+              <span class="drop-zone-icon">📁</span>
+              <p class="drop-zone-text">Drag & drop a file here, or click to browse</p>
+              <small class="text-muted">Max 16MB</small>
+            </div>
+            <input type="file" id="file" name="file" class="drop-zone-input" />
+          </div>
+          
           <form id="upload-form" enctype="multipart/form-data">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <div class="mb-3">
-              <label for="file" class="form-label">Choose file to upload (max 16MB):</label>
-              <input type="file" class="form-control" id="file" name="file" required aria-describedby="fileHelp" />
-              <div id="fileHelp" class="form-text">Supported: images, documents, videos, archives</div>
+            
+            <!-- Selected file display -->
+            <div id="selected-file" class="selected-file mb-3" style="display: none;">
+              <span class="selected-file-icon">📄</span>
+              <span id="selected-file-name">No file selected</span>
+              <button type="button" id="clear-file" class="btn btn-sm btn-outline-danger ms-2">✕</button>
             </div>
+            
             <div class="mb-3">
               <label for="password" class="form-label">Create encryption password:</label>
               <div class="input-group">
@@ -81,6 +108,8 @@
                 <tr>
                   <th>Filename</th>
                   <th>Size</th>
+                  <th>Downloads</th>
+                  <th>Expires</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -102,7 +131,7 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="mb-3">
               <label for="filename" class="form-label">Enter filename to download:</label>
-              <input type="text" class="form-control" id="filename" name="filename" required placeholder="e.g. document.pdf" />
+              <input type="text" class="form-control" id="filename" name="filename" required placeholder="e.g. document_abc123.pdf" />
             </div>
             <div class="mb-3">
               <label for="password_dl" class="form-label">Enter decryption password:</label>
