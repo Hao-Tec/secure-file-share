@@ -347,8 +347,9 @@ async function loadFiles() {
                 // Delete button
                 row.querySelector('.delete-btn')?.addEventListener('click', async (evt) => {
                     const filename = evt.target.dataset.filename;
-                    if (confirm(`Delete "${filename}"? This cannot be undone.`)) {
-                        await deleteFile(filename);
+                    const password = prompt(`Enter password to delete "${filename}":`);
+                    if (password) {
+                        await deleteFile(filename, password);
                     }
                 });
                 
@@ -365,11 +366,15 @@ async function loadFiles() {
     }
 }
 
-async function deleteFile(filename) {
+async function deleteFile(filename, password) {
     try {
         const response = await fetch(`/api/files/${encodeURIComponent(filename)}`, {
             method: 'DELETE',
-            headers: { 'X-CSRFToken': csrfToken }
+            headers: {
+                'X-CSRFToken': csrfToken,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ password: password })
         });
         const result = await response.json();
         showToast(result.message, result.success);

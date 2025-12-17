@@ -415,18 +415,41 @@ def list_files():
 
 
 @app.route("/api/files/<filename>", methods=["DELETE"])
+@limiter.limit("10 per hour", error_message="Too many delete attempts. Please wait.")
 def delete_file(filename):
-    """Delete an encrypted file and its metadata."""
+    """Delete an encrypted file and its metadata. Requires password."""
     safe_filename = secure_filename(filename)
     if not safe_filename:
         return jsonify({"success": False, "message": "❌ Invalid filename."}), 400
     
+    # Get password from request
+    password = None
+    if request.is_json:
+        password = request.json.get("password")
+
+    if not password:
+        return jsonify({"success": False, "message": "❌ Password is required to delete."}), 401
+
     enc_path = os.path.join(app.config['UPLOAD_FOLDER'], safe_filename + ".enc")
     meta_path = get_metadata_path(enc_path)
     
     if not os.path.exists(enc_path):
         return jsonify({"success": False, "message": "❌ File not found."}), 404
     
+    # Verify password by attempting to decrypt
+    try:
+        with open(enc_path, "rb") as f:
+            encrypted_data = f.read()
+
+        # This will raise ValueError if password/tag is wrong
+        decrypt_file(encrypted_data, password)
+
+    except ValueError:
+        return jsonify({"success": False, "message": "❌ Incorrect password."}), 403
+    except Exception as e:
+        app.logger.error(f"Delete verification error: {e}")
+        return jsonify({"success": False, "message": "❌ Verification failed."}), 500
+
     try:
         os.remove(enc_path)
         if os.path.exists(meta_path):

@@ -19,6 +19,7 @@ class Config:
     # Security settings
     WTF_CSRF_ENABLED = True
     WTF_CSRF_TIME_LIMIT = 3600  # 1 hour CSRF token validity
+    RATELIMIT_ENABLED = True
     
     # Password requirements
     MIN_PASSWORD_LENGTH = 8
