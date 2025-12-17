@@ -79,16 +79,47 @@ def create_metadata(enc_path: str, original_filename: str) -> dict:
     return metadata
 
 
+# In-memory cache for metadata: {meta_path: (mtime_ns, metadata_dict)}
+_metadata_cache = {}
+MAX_CACHE_SIZE = 1000
+
+
 def load_metadata(enc_path: str) -> dict | None:
-    """Load metadata for a file, or return None if not found."""
+    """
+    Load metadata for a file, or return None if not found.
+    Uses in-memory caching based on file modification time to reduce disk I/O.
+    """
+    global _metadata_cache
     meta_path = get_metadata_path(enc_path)
-    if os.path.exists(meta_path):
-        try:
-            with open(meta_path, "r") as f:
-                return json.load(f)
-        except (json.JSONDecodeError, IOError):
-            return None
-    return None
+
+    try:
+        # Get file modification time with nanosecond precision
+        stat_result = os.stat(meta_path)
+        mtime = stat_result.st_mtime_ns
+
+        # Check cache
+        if meta_path in _metadata_cache:
+            cached_mtime, cached_data = _metadata_cache[meta_path]
+            if cached_mtime == mtime:
+                # Return a copy to prevent mutation of cached data
+                return cached_data.copy()
+
+        # Cache miss or file changed: read from disk
+        with open(meta_path, "r") as f:
+            data = json.load(f)
+
+        # Update cache (simple eviction policy: clear if full)
+        if len(_metadata_cache) >= MAX_CACHE_SIZE:
+            _metadata_cache.clear()
+
+        _metadata_cache[meta_path] = (mtime, data)
+        return data.copy()
+
+    except (OSError, IOError, json.JSONDecodeError):
+        # File not found or unreadable: clean up cache if present
+        if meta_path in _metadata_cache:
+            del _metadata_cache[meta_path]
+        return None
 
 
 def update_metadata(enc_path: str, updates: dict) -> bool:
