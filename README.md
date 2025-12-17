@@ -8,14 +8,25 @@ A beautiful, secure file sharing application with AES-256 encryption. Upload fil
 
 ## ✨ Features
 
+### Core Security
 - **🔒 AES-256 Encryption** - Military-grade encryption for your files
 - **🔑 Password Protection** - Each file encrypted with a unique password
+- **🛡️ CSRF Protected** - Secure against cross-site request forgery
+- **⚡ Rate Limiting** - Prevents abuse (10 uploads/hr, 50 downloads/hr)
+
+### File Management
+- **📁 File Listing** - View all encrypted files with metadata
+- **⏰ Auto-Expiration** - Files auto-delete after 7 days
+- **📊 Download Counter** - Track how many times files are downloaded
+- **🔗 Shareable Links** - Generate unique share links for files
+
+### User Experience
 - **🎨 Modern UI** - Glassmorphism design with smooth animations
+- **🌙 Dark/Light Mode** - Toggle theme with persistence
+- **📁 Drag & Drop** - Drop files anywhere to upload
 - **📱 Responsive** - Works on desktop, tablet, and mobile
 - **📊 Progress Tracking** - Real-time upload progress bar
 - **💪 Password Strength** - Visual indicator for password security
-- **📁 File Management** - List, download, and delete encrypted files
-- **🛡️ CSRF Protected** - Secure against cross-site request forgery
 
 ## 🚀 Live Demo
 
