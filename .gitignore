@@ -20,8 +20,9 @@ ENV/
 *.swp
 *.swo
 
-# Uploaded encrypted files (user data - don't commit)
-uploads/*.enc
+# Uploaded files and metadata (user data - don't commit)
+uploads/*
+!uploads/.gitkeep
 
 # Downloaded/decrypted files
 decrypted/
