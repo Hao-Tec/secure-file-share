@@ -456,5 +456,36 @@ def gone(error):
     return render_template("expired.html"), 410
 
 
+@app.after_request
+def add_security_headers(response):
+    """Add security headers to every response."""
+    # Strict-Transport-Security: Ensure HTTPS (1 year)
+    response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    
+    # X-Content-Type-Options: Prevent MIME type sniffing
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    
+    # X-Frame-Options: Prevent clickjacking (deny all framing)
+    response.headers['X-Frame-Options'] = 'DENY'
+    
+    # X-XSS-Protection: Enable XSS filter (browser default but good to have)
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    
+    # Referrer-Policy: Control referrer information
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    
+    # Content-Security-Policy: Restrict resources to own origin + trusted CDNs
+    response.headers['Content-Security-Policy'] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; "
+        "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; "
+        "font-src 'self' https://fonts.gstatic.com; "
+        "img-src 'self' data:; "
+        "connect-src 'self'"
+    )
+    
+    return response
+
+
 if __name__ == "__main__":
     app.run(debug=config.DEBUG, host='127.0.0.1', port=5000)
