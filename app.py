@@ -228,19 +228,21 @@ def list_files():
         files = []
         upload_folder = app.config['UPLOAD_FOLDER']
         
-        for filename in os.listdir(upload_folder):
-            if filename.endswith(".enc"):
-                filepath = os.path.join(upload_folder, filename)
-                stat = os.stat(filepath)
-                
-                # Remove .enc extension for display
-                display_name = filename[:-4]
-                
-                files.append({
-                    "name": display_name,
-                    "size": stat.st_size,
-                    "modified": stat.st_mtime
-                })
+        # Optimize: Use os.scandir for faster directory iteration
+        # This avoids separate os.stat calls for each file where possible
+        with os.scandir(upload_folder) as entries:
+            for entry in entries:
+                if entry.name.endswith(".enc") and entry.is_file():
+                    stat = entry.stat()
+
+                    # Remove .enc extension for display
+                    display_name = entry.name[:-4]
+
+                    files.append({
+                        "name": display_name,
+                        "size": stat.st_size,
+                        "modified": stat.st_mtime
+                    })
         
         # Sort by modification time (newest first)
         files.sort(key=lambda x: x['modified'], reverse=True)
