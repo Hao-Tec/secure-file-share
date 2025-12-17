@@ -1,6 +1,7 @@
 """Secure File Share - Flask Application with AES Encryption."""
 import os
 import re
+import uuid
 from flask import Flask, request, render_template, send_file, jsonify
 from flask_wtf.csrf import CSRFProtect
 from Crypto.Cipher import AES
@@ -134,24 +135,30 @@ def upload():
         return jsonify({"success": False, "message": f"❌ {error_msg}"}), 400
     
     try:
-        filename = secure_filename(file.filename)
-        if not filename:
+        original_filename = secure_filename(file.filename)
+        if not original_filename:
             return jsonify({
                 "success": False, 
                 "message": "❌ Invalid filename."
             }), 400
+        
+        # Generate unique filename to prevent collisions
+        # Format: original_name_uuid8.ext.enc
+        name, ext = os.path.splitext(original_filename)
+        unique_id = uuid.uuid4().hex[:8]  # 8 character unique ID
+        unique_filename = f"{name}_{unique_id}{ext}"
             
         file_data = file.read()
         encrypted_data = encrypt_file(file_data, password)
         
-        enc_path = os.path.join(app.config['UPLOAD_FOLDER'], filename + ".enc")
+        enc_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename + ".enc")
         with open(enc_path, "wb") as f:
             f.write(encrypted_data)
         
         return jsonify({
             "success": True,
-            "message": "✅ File uploaded and encrypted successfully!",
-            "filename": filename
+            "message": f"✅ File uploaded and encrypted as '{unique_filename}'!",
+            "filename": unique_filename
         })
     except Exception as e:
         app.logger.error(f"Upload error: {e}")
