@@ -564,4 +564,30 @@ document.addEventListener('DOMContentLoaded', () => {
     if (document.getElementById('files-tbody')) {
         loadFiles();
     }
+
+    // ================== QR CODE ==================
+    let qrGenerated = false;
+    document.getElementById('qr-btn')?.addEventListener('click', () => {
+        if (qrGenerated) return;
+
+        // Check if QRCode library is loaded
+        if (typeof QRCode === 'undefined') {
+            console.error('QRCode library not loaded');
+            return;
+        }
+
+        const shareUrl = window.location.href;
+        const qrContainer = document.getElementById("qrcode");
+        if (qrContainer) {
+            new QRCode(qrContainer, {
+                text: shareUrl,
+                width: 128,
+                height: 128,
+                colorDark : "#000000",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
+            });
+            qrGenerated = true;
+        }
+    });
 });
