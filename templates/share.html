@@ -29,7 +29,7 @@
             <span class="fs-4">📁</span>
             <h4 class="mt-2">{{ filename }}</h4>
           </div>
-          <div class="row text-center">
+          <div class="row text-center mb-3">
             <div class="col-6">
               <div class="stat-box">
                 <span class="stat-icon">⏳</span>
@@ -45,8 +45,36 @@
               </div>
             </div>
           </div>
+          
+          <button class="btn btn-outline-primary btn-sm mb-3" type="button" data-bs-toggle="collapse" data-bs-target="#qrCodeCollapse" aria-expanded="false" aria-controls="qrCodeCollapse" onclick="generateQR()">
+            📱 Show QR Code
+          </button>
+          <div class="collapse" id="qrCodeCollapse">
+            <div class="card card-body d-flex align-items-center justify-content-center">
+              <div id="qrcode"></div>
+              <small class="text-muted mt-2">Scan to download on mobile</small>
+            </div>
+          </div>
         </div>
       </div>
+
+<script src="{{ url_for('static', filename='js/qrcode.min.js') }}"></script>
+<script>
+let qrGenerated = false;
+function generateQR() {
+    if (qrGenerated) return;
+    const shareUrl = window.location.href;
+    new QRCode(document.getElementById("qrcode"), {
+        text: shareUrl,
+        width: 128,
+        height: 128,
+        colorDark : "#000000",
+        colorLight : "#ffffff",
+        correctLevel : QRCode.CorrectLevel.H
+    });
+    qrGenerated = true;
+}
+</script>
 
       <!-- Download Form -->
       <div class="card shadow-sm">

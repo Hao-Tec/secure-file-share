@@ -298,11 +298,12 @@ async function loadFiles() {
             tbody.innerHTML = '';
             
             result.files.forEach(file => {
+                const icon = getFileIcon(file.name);
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>
                         <span class="file-name" role="button" tabindex="0" title="Click to fill download form">
-                            📄 ${escapeHtml(file.name)}
+                            ${icon} ${escapeHtml(file.name)}
                         </span>
                         <button class="btn btn-sm btn-link copy-btn p-0 ms-1" title="Copy filename">📋</button>
                     </td>
@@ -525,7 +526,27 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+function getFileIcon(filename) {
+    const ext = filename.split('.').pop().toLowerCase();
+    const icons = {
+        'pdf': '📕',
+        'doc': '📘', 'docx': '📘',
+        'xls': '📗', 'xlsx': '📗', 'csv': '📊',
+        'ppt': '📙', 'pptx': '📙',
+        'jpg': '🖼️', 'jpeg': '🖼️', 'png': '🖼️', 'gif': '🖼️', 'svg': '🖼️',
+        'zip': '📦', 'rar': '📦', '7z': '📦', 'tar': '📦', 'gz': '📦',
+        'mp3': '🎵', 'wav': '🎵', 'ogg': '🎵',
+        'mp4': '🎬', 'avi': '🎬', 'mkv': '🎬', 'mov': '🎬',
+        'txt': '📝', 'md': '📝', 'json': '📝', 'xml': '📝',
+        'py': '🐍', 'js': '📜', 'html': '🌐', 'css': '🎨'
+    };
+    return icons[ext] || '📄';
+}
+
 // ================== INITIALIZATION ==================
 document.addEventListener('DOMContentLoaded', () => {
-    loadFiles();
+    // Only load files if we are on the main page (file table exists)
+    if (document.getElementById('files-tbody')) {
+        loadFiles();
+    }
 });
