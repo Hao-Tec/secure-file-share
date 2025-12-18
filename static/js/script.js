@@ -195,7 +195,14 @@ document.getElementById('upload-form')?.addEventListener('submit', async functio
                 if (result.share_url) {
                     setTimeout(() => {
                         const fullShareUrl = window.location.origin + result.share_url;
-                        showToast(`📋 Share link: ${result.filename}`, true);
+                        
+                        // Auto-copy share link to clipboard
+                        navigator.clipboard.writeText(fullShareUrl).then(() => {
+                           showToast(`📋 Link copied! Ready to share: ${result.filename}`, true);
+                        }).catch(() => {
+                           showToast(`📋 Share link: ${result.filename}`, true);
+                        });
+                        
                     }, 1500);
                 }
                 

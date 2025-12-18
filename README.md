@@ -25,6 +25,7 @@ A beautiful, secure file sharing application with AES-256 encryption. Upload fil
 - **📁 Smart Drag & Drop** - Drop files anywhere with visual feedback
 - **📱 Fully Responsive** - Optimized for desktop, tablet, and mobile
 - **📊 Real-time Progress** - Upload progress bar and status feedback
+- **📋 Auto-Copy** - Automatically copies share links to clipboard
 - **💪 Password Strength** - Visual indicator for password complexity
 
 ## 🚀 Live Demo
