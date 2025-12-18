@@ -98,8 +98,6 @@ A beautiful, secure file sharing application with AES-256 encryption. Upload fil
 | **Rate Limiting** | Per-IP limiting for uploads (2/min, 5/hr) and downloads (5/min, 20/hr) |
 | **CSRF Protection** | Flask-WTF CSRF tokens on all forms |
 | **Input Validation** | Secure filename sanitization and path traversal prevention |
-| **CSRF Protection** | Flask-WTF CSRF tokens on all forms |
-| **Input Validation** | Secure filename sanitization and path traversal prevention |
 | **IDOR Protection** | Deletion requires "proof of knowledge" (password verification) |
 
 ## ⚡ Performance
