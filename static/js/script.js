@@ -374,10 +374,18 @@ async function loadFiles() {
 }
 
 async function deleteFile(filename) {
+    // Prompt for password to confirm deletion
+    const password = prompt(`Enter the encryption password to delete "${filename}":`);
+    if (!password) return; // User cancelled
+    
     try {
         const response = await fetch(`/api/files/${encodeURIComponent(filename)}`, {
             method: 'DELETE',
-            headers: { 'X-CSRFToken': csrfToken }
+            headers: { 
+                'X-CSRFToken': csrfToken,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ password: password })
         });
         const result = await response.json();
         showToast(result.message, result.success);

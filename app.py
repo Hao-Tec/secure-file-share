@@ -414,9 +414,19 @@ def list_files():
         return jsonify({"success": False, "message": "❌ Could not retrieve file list."}), 500
 
 
-@app.route("/api/files/<filename>", methods=["DELETE"])
+@app.route("/api/files/<filename>", methods=["DELETE", "POST"])
 def delete_file(filename):
-    """Delete an encrypted file and its metadata."""
+    """Delete an encrypted file and its metadata (requires password)."""
+    # Get password from JSON body or form data
+    password = ""
+    if request.is_json:
+        password = request.json.get("password", "")
+    else:
+        password = request.form.get("password", "")
+        
+    if not password:
+        return jsonify({"success": False, "message": "❌ Password required to delete file."}), 400
+
     safe_filename = secure_filename(filename)
     if not safe_filename:
         return jsonify({"success": False, "message": "❌ Invalid filename."}), 400
@@ -428,10 +438,22 @@ def delete_file(filename):
         return jsonify({"success": False, "message": "❌ File not found."}), 404
     
     try:
+        # Verify password by attempting to decrypt (proves ownership)
+        with open(enc_path, "rb") as f:
+            encrypted_data = f.read()
+            
+        # This will raise ValueError if password is wrong
+        decrypt_file(encrypted_data, password)
+        
+        # If we got here, password is correct
         os.remove(enc_path)
         if os.path.exists(meta_path):
             os.remove(meta_path)
+            
         return jsonify({"success": True, "message": "✅ File deleted successfully."})
+        
+    except ValueError:
+        return jsonify({"success": False, "message": "❌ Incorrect password. Deletion denied."}), 403
     except Exception as e:
         app.logger.error(f"Delete error: {e}")
         return jsonify({"success": False, "message": "❌ Could not delete file."}), 500
