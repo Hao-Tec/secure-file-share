@@ -98,14 +98,17 @@ def create_metadata(enc_path: str, original_filename: str) -> dict:
     return metadata
 
 
-def load_metadata(enc_path: str) -> dict | None:
+def load_metadata(enc_path: str, known_mtime: int = None) -> dict | None:
     """Load metadata with caching strategy."""
     meta_path = get_metadata_path(enc_path)
     
     try:
-        # Check file stat for invalidation
-        stat = os.stat(meta_path)
-        mtime = stat.st_mtime_ns
+        if known_mtime is not None:
+            mtime = known_mtime
+        else:
+            # Check file stat for invalidation
+            stat = os.stat(meta_path)
+            mtime = stat.st_mtime_ns
         
         # Check cache
         cached = _metadata_cache.get(enc_path)
@@ -449,35 +452,47 @@ def list_files():
         upload_folder = app.config['UPLOAD_FOLDER']
         now = datetime.utcnow()
         
-        with os.scandir(upload_folder) as entries:
-            for entry in entries:
-                if entry.name.endswith(".enc") and entry.is_file():
-                    enc_path = entry.path
-                    stat = entry.stat()
-                    metadata = load_metadata(enc_path)
-                    
-                    # Skip and delete expired files
-                    if metadata and is_file_expired(metadata):
-                        try:
-                            os.remove(enc_path)
-                            meta_path = get_metadata_path(enc_path)
-                            if os.path.exists(meta_path):
-                                os.remove(meta_path)
-                        except Exception:
-                            pass
-                        continue
-                    
-                    display_name = entry.name[:-4]
-                    
-                    file_info = {
-                        "name": display_name,
-                        "size": stat.st_size,
-                        "modified": stat.st_mtime,
-                        "downloads": metadata.get("downloads", 0) if metadata else 0,
-                        "expires_in": get_time_remaining(metadata) if metadata else "Unknown",
-                        "share_token": metadata.get("share_token") if metadata else None
-                    }
-                    files.append(file_info)
+        # Pre-scan directory to avoid os.stat calls
+        entries_by_name = {}
+        with os.scandir(upload_folder) as it:
+            for entry in it:
+                entries_by_name[entry.name] = entry
+
+        for name, entry in entries_by_name.items():
+            if name.endswith(".enc") and entry.is_file():
+                enc_path = entry.path
+                stat = entry.stat()
+
+                # Try to get mtime from cached dir entry if available
+                meta_name = name + ".meta"
+                known_mtime = None
+                if meta_name in entries_by_name:
+                    known_mtime = entries_by_name[meta_name].stat().st_mtime_ns
+
+                metadata = load_metadata(enc_path, known_mtime=known_mtime)
+
+                # Skip and delete expired files
+                if metadata and is_file_expired(metadata):
+                    try:
+                        os.remove(enc_path)
+                        meta_path = get_metadata_path(enc_path)
+                        if os.path.exists(meta_path):
+                            os.remove(meta_path)
+                    except Exception:
+                        pass
+                    continue
+
+                display_name = name[:-4]
+
+                file_info = {
+                    "name": display_name,
+                    "size": stat.st_size,
+                    "modified": stat.st_mtime,
+                    "downloads": metadata.get("downloads", 0) if metadata else 0,
+                    "expires_in": get_time_remaining(metadata) if metadata else "Unknown",
+                    "share_token": metadata.get("share_token") if metadata else None
+                }
+                files.append(file_info)
         
         files.sort(key=lambda x: x['modified'], reverse=True)
         
