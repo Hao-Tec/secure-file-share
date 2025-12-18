@@ -53,6 +53,13 @@ FILE_EXPIRY_DAYS = 7  # Files expire after 7 days
 
 # ==================== METADATA HELPERS ====================
 
+# Global in-memory cache to reduce disk I/O
+# Structure: path -> {'mtime': ns, 'data': dict}
+_metadata_cache = {}
+# Structure: token -> enc_path (acceleration index)
+_token_cache = {}
+MAX_CACHE_SIZE = 1000
+
 def get_metadata_path(enc_path: str) -> str:
     """Get the metadata file path for an encrypted file."""
     return enc_path + ".meta"
@@ -76,35 +83,83 @@ def create_metadata(enc_path: str, original_filename: str) -> dict:
     with open(meta_path, "w") as f:
         json.dump(metadata, f)
     
+    # Update cache immediately
+    try:
+        stat = os.stat(meta_path)
+        if len(_metadata_cache) >= MAX_CACHE_SIZE:
+             _metadata_cache.clear()
+             _token_cache.clear()
+        
+        _metadata_cache[enc_path] = {'mtime': stat.st_mtime_ns, 'data': metadata}
+        _token_cache[share_token] = enc_path
+    except OSError:
+        pass
+    
     return metadata
 
 
 def load_metadata(enc_path: str) -> dict | None:
-    """Load metadata for a file, or return None if not found."""
+    """Load metadata with caching strategy."""
     meta_path = get_metadata_path(enc_path)
-    if os.path.exists(meta_path):
-        try:
-            with open(meta_path, "r") as f:
-                return json.load(f)
-        except (json.JSONDecodeError, IOError):
-            return None
-    return None
+    
+    try:
+        # Check file stat for invalidation
+        stat = os.stat(meta_path)
+        mtime = stat.st_mtime_ns
+        
+        # Check cache
+        cached = _metadata_cache.get(enc_path)
+        if cached and cached['mtime'] == mtime:
+            return cached['data'].copy()  # Return copy to prevent mutation
+            
+        # Cache miss or stale: read from disk
+        with open(meta_path, "r") as f:
+            data = json.load(f)
+            
+        # Update cache
+        if len(_metadata_cache) >= MAX_CACHE_SIZE:
+             _metadata_cache.clear()
+             _token_cache.clear()
+             
+        _metadata_cache[enc_path] = {'mtime': mtime, 'data': data}
+        
+        # Valid metadata always has a share token, index it
+        if "share_token" in data:
+            _token_cache[data["share_token"]] = enc_path
+            
+        return data.copy()
+        
+    except (json.JSONDecodeError, IOError, OSError, KeyError):
+        # File doesn't exist or is corrupt
+        # Clean up cache if it was there
+        if enc_path in _metadata_cache:
+            del _metadata_cache[enc_path]
+        return None
 
 
 def update_metadata(enc_path: str, updates: dict) -> bool:
     """Update specific fields in metadata."""
+    # Force load to ensure we have latest
     metadata = load_metadata(enc_path)
     if metadata:
         metadata.update(updates)
         meta_path = get_metadata_path(enc_path)
-        with open(meta_path, "w") as f:
-            json.dump(metadata, f)
-        return True
+        try:
+            with open(meta_path, "w") as f:
+                json.dump(metadata, f)
+            
+            # Invalidate/Update cache
+            stat = os.stat(meta_path)
+            _metadata_cache[enc_path] = {'mtime': stat.st_mtime_ns, 'data': metadata}
+            return True
+        except IOError:
+            return False
     return False
 
 
 def increment_download_count(enc_path: str) -> int:
     """Increment and return the download count."""
+    # Use load_metadata to leverage cache for read
     metadata = load_metadata(enc_path)
     if metadata:
         new_count = metadata.get("downloads", 0) + 1
@@ -151,18 +206,36 @@ def get_time_remaining(metadata: dict) -> str:
 
 def find_file_by_share_token(token: str) -> tuple[str, dict] | tuple[None, None]:
     """Find a file by its share token. Returns (enc_path, metadata) or (None, None)."""
+    
+    # 1. Fast path: Check token cache
+    cached_path = _token_cache.get(token)
+    if cached_path:
+        # Verify it still exists and load (will be fast from metadata cache)
+        metadata = load_metadata(cached_path)
+        if metadata and metadata.get("share_token") == token:
+            return cached_path, metadata
+        else:
+            # Invalid cache entry
+            if token in _token_cache:
+                del _token_cache[token]
+
+    # 2. Slow path: Scan directory (only happens on cold cache or restart)
     upload_folder = app.config['UPLOAD_FOLDER']
     try:
         with os.scandir(upload_folder) as entries:
             for entry in entries:
                 if entry.name.endswith(".enc") and entry.is_file():
                     enc_path = entry.path
+                    # load_metadata will populate the cache for next time
                     metadata = load_metadata(enc_path)
                     if metadata and metadata.get("share_token") == token:
                         return enc_path, metadata
     except Exception:
         pass
     return None, None
+
+
+
 
 
 # ==================== VALIDATION HELPERS ====================
@@ -449,6 +522,12 @@ def delete_file(filename):
         os.remove(enc_path)
         if os.path.exists(meta_path):
             os.remove(meta_path)
+            
+        # Clean up cache
+        if enc_path in _metadata_cache:
+            data = _metadata_cache.pop(enc_path)['data']
+            if 'share_token' in data and data['share_token'] in _token_cache:
+                del _token_cache[data['share_token']]
             
         return jsonify({"success": True, "message": "✅ File deleted successfully."})
         
