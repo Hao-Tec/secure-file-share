@@ -104,15 +104,44 @@ A beautiful, secure file sharing application with AES-256 encryption. Upload fil
 - **In-Memory Caching**: Cache metadata to reduce disk I/O by ~85%
 - **O(1) Token Lookup**: Instant share link resolution via hash map optimization
 
-## 🚀 Deployment on Render
+## 🚀 Deployment on Railway
 
-1. **Push to GitHub**
-2. **Create Web Service** on Render
-3. **Build Command:** `pip install -r requirements.txt`
-4. **Start Command:** `gunicorn app:app`
-5. **Environment Variables:**
-   - `SECRET_KEY`: (Large random string)
-   - `FLASK_ENV`: `production`
+Railway provides free persistent storage, making it perfect for this application.
+
+### Quick Deploy
+
+1. **Fork/Push to GitHub** (if not already done)
+
+2. **Create Railway Account**
+   - Go to https://railway.app/
+   - Sign in with GitHub (no credit card required for free tier)
+
+3. **Deploy from GitHub**
+   - Click **"New Project"**
+   - Select **"Deploy from GitHub repo"**
+   - Choose your `secure-file-share` repository
+   - Railway will auto-detect the Python app
+
+4. **Add Persistent Volume**
+   - Go to your service
+   - Click **"Volumes"** tab
+   - Click **"New Volume"**
+   - **Mount Path**: `/app/uploads`
+   - Click **"Add"**
+
+5. **Set Environment Variables**
+   - Go to **"Variables"** tab
+   - Add these variables:
+     - `SECRET_KEY`: (Generate a random 32+ character string)
+     - `FLASK_ENV`: `production`
+     - `PYTHON_VERSION`: `3.11.0`
+
+6. **Deploy!**
+   - Railway will automatically deploy
+   - You'll get a public URL like `https://your-app.up.railway.app`
+
+### Files Will Persist! ✅
+With the volume mounted, your uploaded files will survive deployments and restarts.
 
 ## 🤝 Contributing
 
