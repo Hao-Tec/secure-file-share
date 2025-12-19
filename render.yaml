@@ -1,7 +1,7 @@
 services:
   # The Web Service (Flask App)
   - type: web
-    name: secure-file-share
+    name: cipher-vault
     env: python
     plan: free
     buildCommand: pip install -r requirements.txt
