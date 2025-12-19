@@ -226,17 +226,22 @@ def upload_file():
         return jsonify({"success": False, "message": f"❌ {error_msg}"}), 400
     
     try:
+        app.logger.info(f"Upload started: {file.filename}")
+        
         original_filename = secure_filename(file.filename)
         if not original_filename:
             return jsonify({"success": False, "message": "❌ Invalid filename."}), 400
         
         file_data = file.read()
+        app.logger.info(f"File read: {len(file_data)} bytes")
 
         # Check size (redundant to configured limit but good practice)
         if len(file_data) > app.config['MAX_CONTENT_LENGTH']:
              return jsonify({"success": False, "message": "❌ File too large"}), 413
         
+        app.logger.info("Starting encryption...")
         encrypted_data = encrypt_file(file_data, password)
+        app.logger.info(f"Encryption complete: {len(encrypted_data)} bytes")
         
         # Generate a unique filename for storage in DB (e.g., UUID.enc)
         # This will be the file_id in the database
@@ -246,7 +251,9 @@ def upload_file():
         metadata = create_metadata(original_filename) # Use original name for display
         
         # Save to Database
+        app.logger.info(f"Saving to database: {enc_filename}")
         database.save_file(enc_filename, encrypted_data, metadata)
+        app.logger.info("Database save complete!")
         
         return jsonify({
             "success": True,
@@ -256,8 +263,10 @@ def upload_file():
             "share_url": f"{request.host_url}share/{metadata['share_token']}"
         })
     except Exception as e:
-        app.logger.error(f"Upload error: {e}")
-        return jsonify({"success": False, "message": "❌ An error occurred during upload."}), 500
+        app.logger.error(f"Upload error at line {e.__traceback__.tb_lineno}: {type(e).__name__}: {e}")
+        import traceback
+        app.logger.error(traceback.format_exc())
+        return jsonify({"success": False, "message": f"❌ Upload failed: {str(e)}"}), 500
 
 
 @app.route("/share/<token>")
