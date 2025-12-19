@@ -98,14 +98,17 @@ def create_metadata(enc_path: str, original_filename: str) -> dict:
     return metadata
 
 
-def load_metadata(enc_path: str) -> dict | None:
+def load_metadata(enc_path: str, known_mtime: int = None) -> dict | None:
     """Load metadata with caching strategy."""
     meta_path = get_metadata_path(enc_path)
     
     try:
-        # Check file stat for invalidation
-        stat = os.stat(meta_path)
-        mtime = stat.st_mtime_ns
+        if known_mtime is not None:
+            mtime = known_mtime
+        else:
+            # Check file stat for invalidation
+            stat = os.stat(meta_path)
+            mtime = stat.st_mtime_ns
         
         # Check cache
         cached = _metadata_cache.get(enc_path)
