@@ -558,6 +558,57 @@ function getFileIcon(filename) {
     return icons[ext] || '📄';
 }
 
+// Generate Password Button
+document.getElementById('generate-password')?.addEventListener('click', () => {
+    const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+    const length = 16;
+    let passwordChars = [];
+
+    // Helper for secure random integer
+    const getSecureRandomInt = (max) => {
+        const array = new Uint32Array(1);
+        window.crypto.getRandomValues(array);
+        return array[0] % max;
+    };
+
+    // Ensure at least one of each required type
+    const upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const lower = "abcdefghijklmnopqrstuvwxyz";
+    const numbers = "0123456789";
+
+    passwordChars.push(upper[getSecureRandomInt(upper.length)]);
+    passwordChars.push(lower[getSecureRandomInt(lower.length)]);
+    passwordChars.push(numbers[getSecureRandomInt(numbers.length)]);
+
+    // Fill the rest
+    for (let i = 3; i < length; i++) {
+        passwordChars.push(chars[getSecureRandomInt(chars.length)]);
+    }
+
+    // Fisher-Yates Shuffle
+    for (let i = passwordChars.length - 1; i > 0; i--) {
+        const j = getSecureRandomInt(i + 1);
+        [passwordChars[i], passwordChars[j]] = [passwordChars[j], passwordChars[i]];
+    }
+
+    const password = passwordChars.join('');
+
+    const passwordInput = document.getElementById('password');
+    if (passwordInput) {
+        passwordInput.value = password;
+        passwordInput.type = 'text'; // Show it so they can see/copy it
+
+        // Update toggle icon
+        const toggleBtn = document.querySelector('.toggle-password[data-target="password"]');
+        if (toggleBtn) toggleBtn.textContent = '🙈';
+
+        // Trigger input event to update strength meter
+        passwordInput.dispatchEvent(new Event('input'));
+
+        showToast('🎲 Secure password generated!', true);
+    }
+});
+
 // ================== INITIALIZATION ==================
 document.addEventListener('DOMContentLoaded', () => {
     // Only load files if we are on the main page (file table exists)
