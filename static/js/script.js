@@ -127,20 +127,24 @@ function handleFileSelect(file) {
     // Update UI
     if (selectedFileEl && selectedFileName) {
         selectedFileName.textContent = `${file.name} (${formatFileSize(file.size)})`;
+        selectedFileEl.classList.remove('d-none');
         selectedFileEl.style.display = 'flex';
     }
     
     // Hide drop zone
     if (dropZone) {
-        dropZone.style.display = 'none';
+        dropZone.classList.add('d-none');
     }
 }
 
 function clearSelectedFile() {
     selectedFile = null;
     if (fileInput) fileInput.value = '';
-    if (selectedFileEl) selectedFileEl.style.display = 'none';
-    if (dropZone) dropZone.style.display = 'flex';
+    if (selectedFileEl) {
+        selectedFileEl.classList.add('d-none');
+        selectedFileEl.style.display = '';
+    }
+    if (dropZone) dropZone.classList.remove('d-none');
 }
 
 // ================== UPLOAD HANDLING ==================
@@ -173,7 +177,7 @@ document.getElementById('upload-form')?.addEventListener('submit', async functio
     }
     
     // Show progress bar and disable button
-    progressContainer.style.display = 'block';
+    progressContainer.classList.remove('d-none');
     setButtonLoading(uploadBtn, true);
     
     const xhr = new XMLHttpRequest();
@@ -189,7 +193,7 @@ document.getElementById('upload-form')?.addEventListener('submit', async functio
     
     xhr.addEventListener('load', () => {
         setButtonLoading(uploadBtn, false);
-        progressContainer.style.display = 'none';
+        progressContainer.classList.add('d-none');
         progressBar.style.width = '0%';
         
         try {
@@ -230,7 +234,7 @@ document.getElementById('upload-form')?.addEventListener('submit', async functio
     
     xhr.addEventListener('error', () => {
         setButtonLoading(uploadBtn, false);
-        progressContainer.style.display = 'none';
+        progressContainer.classList.add('d-none');
         showToast('❌ Upload failed. Please try again.', false);
         triggerShake(uploadCard);
     });
@@ -297,9 +301,9 @@ async function loadFiles() {
     const listEl = document.getElementById('files-list');
     const tbody = document.getElementById('files-tbody');
     
-    if (loadingEl) loadingEl.style.display = 'block';
-    if (emptyEl) emptyEl.style.display = 'none';
-    if (listEl) listEl.style.display = 'none';
+    if (loadingEl) loadingEl.classList.remove('d-none');
+    if (emptyEl) emptyEl.classList.add('d-none');
+    if (listEl) listEl.classList.add('d-none');
     
     try {
         const response = await fetch('/api/files', {
@@ -307,7 +311,7 @@ async function loadFiles() {
         });
         const result = await response.json();
         
-        if (loadingEl) loadingEl.style.display = 'none';
+        if (loadingEl) loadingEl.classList.add('d-none');
         
         if (result.success && result.files.length > 0) {
             tbody.innerHTML = '';
@@ -372,12 +376,12 @@ async function loadFiles() {
                 tbody.appendChild(row);
             });
             
-            if (listEl) listEl.style.display = 'block';
+            if (listEl) listEl.classList.remove('d-none');
         } else {
-            if (emptyEl) emptyEl.style.display = 'block';
+            if (emptyEl) emptyEl.classList.remove('d-none');
         }
     } catch {
-        if (loadingEl) loadingEl.style.display = 'none';
+        if (loadingEl) loadingEl.classList.add('d-none');
         showToast('❌ Could not load file list.', false);
     }
 }

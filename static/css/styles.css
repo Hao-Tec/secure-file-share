@@ -675,3 +675,11 @@ footer small {
   outline-offset: 2px;
   border-radius: 4px;
 }
+/* === Utility Classes (Replacements for inline styles) === */
+.max-w-500 {
+  max-width: 500px;
+}
+
+.w-0 {
+  width: 0%;
+}
