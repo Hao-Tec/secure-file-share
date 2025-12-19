@@ -202,10 +202,11 @@ document.getElementById('upload-form')?.addEventListener('submit', async functio
                 // Show share link if available
                 if (result.share_url) {
                     setTimeout(() => {
-                        const fullShareUrl = window.location.origin + result.share_url;
+                        // Backend already returns full URL, don't add origin again
+                        const shareUrl = result.share_url;
                         
                         // Auto-copy share link to clipboard
-                        navigator.clipboard.writeText(fullShareUrl).then(() => {
+                        navigator.clipboard.writeText(shareUrl).then(() => {
                            showToast(`📋 Link copied! Ready to share: ${result.filename}`, true);
                         }).catch(() => {
                            showToast(`📋 Share link: ${result.filename}`, true);
@@ -245,17 +246,34 @@ document.getElementById('download-form')?.addEventListener('submit', async funct
     e.preventDefault();
     
     const form = e.target;
-    const formData = new FormData(form);
     const downloadBtn = document.getElementById('download-btn');
+    const password = document.getElementById('password')?.value;
+    
+    if (!password) {
+        showToast('❌ Password is required.', false);
+        return;
+    }
+    
+    // Extract token from URL (e.g., /share/abc123)
+    const pathParts = window.location.pathname.split('/');
+    const token = pathParts[pathParts.length - 1];
+    
+    if (!token) {
+        showToast('❌ Invalid share link.', false);
+        return;
+    }
     
     setButtonLoading(downloadBtn, true);
     showToast('🔄 Preparing your download...', true);
     
     try {
-        const response = await fetch('/download', {
+        const response = await fetch(`/api/download/${token}`, {
             method: 'POST',
-            headers: { 'X-CSRFToken': csrfToken },
-            body: formData
+            headers: { 
+                'X-CSRFToken': csrfToken,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ password: password })
         });
         
         const contentType = response.headers.get('content-type');
@@ -364,9 +382,8 @@ async function loadFiles() {
                 row.querySelector('.delete-btn')?.addEventListener('click', async (evt) => {
                     const fileId = evt.target.dataset.fileid;
                     const displayName = evt.target.dataset.displayname;
-                    if (confirm(`Delete "${displayName}"? This cannot be undone.`)) {
-                        await deleteFile(fileId);
-                    }
+                    // Show custom modal (removed browser confirm)
+                    await deleteFile(fileId, displayName);
                 });
                 
                 tbody.appendChild(row);
