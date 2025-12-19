@@ -358,20 +358,17 @@ def list_files():
         for file_id, metadata in db_files:
             if not metadata: 
                 continue
+            
+            # Get the actual encrypted data size
+            encrypted_data, _ = database.get_file(file_id)
+            file_size = len(encrypted_data) if encrypted_data else 0
                 
             file_info = {
-                # UI display uses 'name'. We send the unique file_id (minus .enc) as name
-                # so the frontend can use it for deletion.
-                # Front end displays "name" as text.
-                # If we want to display "original_name" in UI but use ID for delete, we need to check script.js
-                # script.js: `div.textContent = file.name` and `deleteFile(filename)`
-                # So if we change this, the UI changes.
-                # Compromise: Send file_id as name, but maybe we should update script?
-                # Actually, previously `name` was `test.png` from `test.png.enc`.
-                # Let's send `file_id` (minus .enc) as `name` so it matches previous logic.
-                "name": file_id.replace(".enc", ""), # This is the unique ID
-                "original_name": metadata.get("original_name", "Unknown"), # Extra field if we want to update UI
-                "size": "Encrypted", 
+                # Display the original filename to users
+                "name": metadata.get("original_name", "Unknown"),
+                # Store file_id for backend operations (deletion)
+                "file_id": file_id.replace(".enc", ""),
+                "size": file_size,  # Now a number, not a string
                 "modified": 0,
                 "downloads": metadata.get("downloads", 0),
                 "expires_in": get_time_remaining(metadata),
@@ -389,13 +386,13 @@ def list_files():
         return jsonify({"success": False, "message": "❌ Could not retrieve file list."}), 500
 
 
-@app.route("/api/files/<filename>", methods=["DELETE", "POST"])
-def delete_file(filename):
+@app.route("/api/files/<file_id>", methods=["DELETE", "POST"])
+def delete_file(file_id):
     """Delete an encrypted file and its metadata (requires password)."""
-    # Filename here comes from the UI list "name" field.
-    # We stripped .enc in list_files, so we add it back to get ID.
-    if not filename.endswith(".enc"):
-        filename += ".enc"
+    # file_id comes from the UI list "file_id" field.
+    # We stripped .enc in list_files, so we add it back to get the actual DB filename.
+    if not file_id.endswith(".enc"):
+        file_id += ".enc"
         
     password = ""
     if request.is_json:
@@ -407,7 +404,7 @@ def delete_file(filename):
         return jsonify({"success": False, "message": "❌ Password required to delete file."}), 400
 
     # Retrieve from DB
-    encrypted_data, metadata = database.get_file(filename)
+    encrypted_data, metadata = database.get_file(file_id)
     
     if not encrypted_data:
         return jsonify({"success": False, "message": "❌ File not found."}), 404
@@ -417,7 +414,7 @@ def delete_file(filename):
         decrypt_file(encrypted_data, password)
         
         # If successful, delete from DB
-        database.delete_file(filename)
+        database.delete_file(file_id)
             
         return jsonify({"success": True, "message": "✅ File deleted successfully."})
         

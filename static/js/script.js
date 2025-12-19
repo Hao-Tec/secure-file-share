@@ -327,7 +327,7 @@ async function loadFiles() {
                     <td><span class="badge ${file.expires_in === 'Expired' ? 'bg-danger' : 'bg-warning text-dark'}">${file.expires_in || 'Unknown'}</span></td>
                     <td>
                         ${file.share_token ? `<button class="btn btn-sm btn-outline-info share-btn me-1" data-token="${escapeHtml(file.share_token)}" title="Copy share link">🔗</button>` : ''}
-                        <button class="btn btn-sm btn-outline-danger delete-btn" data-filename="${escapeHtml(file.name)}" title="Delete file">🗑️</button>
+                        <button class="btn btn-sm btn-outline-danger delete-btn" data-fileid="${escapeHtml(file.file_id)}" data-displayname="${escapeHtml(file.name)}" title="Delete file">🗑️</button>
                     </td>
                 `;
                 
@@ -362,9 +362,10 @@ async function loadFiles() {
                 
                 // Delete button
                 row.querySelector('.delete-btn')?.addEventListener('click', async (evt) => {
-                    const filename = evt.target.dataset.filename;
-                    if (confirm(`Delete "${filename}"? This cannot be undone.`)) {
-                        await deleteFile(filename);
+                    const fileId = evt.target.dataset.fileid;
+                    const displayName = evt.target.dataset.displayname;
+                    if (confirm(`Delete "${displayName}"? This cannot be undone.`)) {
+                        await deleteFile(fileId);
                     }
                 });
                 
@@ -381,13 +382,13 @@ async function loadFiles() {
     }
 }
 
-async function deleteFile(filename) {
+async function deleteFile(fileId, displayName = 'this file') {
     // Prompt for password to confirm deletion
-    const password = prompt(`Enter the encryption password to delete "${filename}":`);
+    const password = prompt(`Enter the encryption password to delete "${displayName}":`);
     if (!password) return; // User cancelled
     
     try {
-        const response = await fetch(`/api/files/${encodeURIComponent(filename)}`, {
+        const response = await fetch(`/api/files/${encodeURIComponent(fileId)}`, {
             method: 'DELETE',
             headers: { 
                 'X-CSRFToken': csrfToken,
@@ -613,7 +614,12 @@ document.getElementById('generate-password')?.addEventListener('click', () => {
         // Trigger input event to update strength meter
         passwordInput.dispatchEvent(new Event('input'));
 
-        showToast('🎲 Secure password generated!', true);
+        // Auto-copy to clipboard
+        navigator.clipboard.writeText(password).then(() => {
+            showToast('🎲 Secure password generated and copied to clipboard!', true);
+        }).catch(() => {
+            showToast('🎲 Secure password generated!', true);
+        });
     }
 });
 
