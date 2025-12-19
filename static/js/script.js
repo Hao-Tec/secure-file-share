@@ -330,6 +330,9 @@ async function loadFiles() {
         if (result.success && result.files.length > 0) {
             tbody.innerHTML = '';
             
+            // OPTIMIZATION: Use DocumentFragment to batch DOM updates and minimize reflows
+            const fragment = document.createDocumentFragment();
+
             result.files.forEach(file => {
                 const icon = getFileIcon(file.name);
                 const row = document.createElement('tr');
@@ -386,9 +389,11 @@ async function loadFiles() {
                     await deleteFile(fileId, displayName);
                 });
                 
-                tbody.appendChild(row);
+                fragment.appendChild(row);
             });
             
+            tbody.appendChild(fragment);
+
             if (listEl) listEl.style.display = 'block';
         } else {
             if (emptyEl) emptyEl.style.display = 'block';
