@@ -227,7 +227,7 @@ document.getElementById('upload-form')?.addEventListener('submit', async functio
         triggerShake(uploadCard);
     });
     
-    xhr.open('POST', '/upload');
+    xhr.open('POST', '/api/upload');
     xhr.setRequestHeader('X-CSRFToken', csrfToken);
     xhr.send(formData);
 });
