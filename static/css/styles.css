@@ -675,3 +675,127 @@ footer small {
   outline-offset: 2px;
   border-radius: 4px;
 }
+
+/* === Delete Modal === */
+.delete-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.delete-modal.active {
+  display: flex;
+}
+
+.delete-modal-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  animation: fadeIn 0.3s ease;
+}
+
+.delete-modal-content {
+  position: relative;
+  z-index: 1;
+  background: var(--bg-card);
+  backdrop-filter: blur(20px);
+  border-radius: 1rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  border: 1px solid var(--border-color);
+  max-width: 500px;
+  width: 90%;
+  animation: slideDown 0.3s ease;
+}
+
+[data-theme="light"] .delete-modal-content {
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+.delete-modal-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.delete-modal-header h5 {
+  margin: 0;
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 1.25rem;
+}
+
+.delete-modal-close {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.75rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.delete-modal-close:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--accent-danger);
+}
+
+.delete-modal-body {
+  padding: 1.5rem;
+}
+
+.delete-modal-body p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.delete-modal-body strong {
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+.delete-modal-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

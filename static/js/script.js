@@ -382,13 +382,82 @@ async function loadFiles() {
     }
 }
 
-async function deleteFile(fileId, displayName = 'this file') {
-    // Prompt for password to confirm deletion
-    const password = prompt(`Enter the encryption password to delete "${displayName}":`);
-    if (!password) return; // User cancelled
+// ================== DELETE MODAL HANDLING ==================
+let currentDeleteFileId = null;
+let currentDeleteFileName = null;
+
+const deleteModal = document.getElementById('delete-modal');
+const deleteFilenameEl = document.getElementById('delete-filename');
+const deletePasswordInput = document.getElementById('delete-password');
+const deleteCancelBtn = document.getElementById('delete-cancel-btn');
+const deleteConfirmBtn = document.getElementById('delete-confirm-btn');
+const deleteModalClose = document.querySelector('.delete-modal-close');
+
+// Function to show delete modal
+function showDeleteModal(fileId, fileName) {
+    currentDeleteFileId = fileId;
+    currentDeleteFileName = fileName;
+    
+    deleteFilenameEl.textContent = fileName;
+    deletePasswordInput.value = '';
+    deleteModal.classList.add('active');
+    
+    // Focus password input
+    setTimeout(() => deletePasswordInput.focus(), 100);
+    
+    // Prevent body scroll
+    document.body.style.overflow = 'hidden';
+}
+
+// Function to close delete modal
+function closeDeleteModal() {
+    deleteModal.classList.remove('active');
+    deletePasswordInput.value = '';
+    currentDeleteFileId = null;
+    currentDeleteFileName = null;
+    
+    // Restore body scroll
+    document.body.style.overflow = '';
+}
+
+// Close modal on backdrop click
+deleteModal?.querySelector('.delete-modal-backdrop')?.addEventListener('click', closeDeleteModal);
+
+// Close modal on X button
+deleteModalClose?.addEventListener('click', closeDeleteModal);
+
+// Close modal on Cancel button
+deleteCancelBtn?.addEventListener('click', closeDeleteModal);
+
+// Close modal on Escape key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && deleteModal?.classList.contains('active')) {
+        closeDeleteModal();
+    }
+});
+
+// Submit on Enter key in password input
+deletePasswordInput?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        deleteConfirmBtn?.click();
+    }
+});
+
+// Confirm deletion
+deleteConfirmBtn?.addEventListener('click', async () => {
+    const password = deletePasswordInput?.value;
+    
+    if (!password) {
+        showToast('❌ Password is required.', false);
+        deletePasswordInput?.focus();
+        return;
+    }
+    
+    // Show loading
+    setButtonLoading(deleteConfirmBtn, true);
     
     try {
-        const response = await fetch(`/api/files/${encodeURIComponent(fileId)}`, {
+        const response = await fetch(`/api/files/${encodeURIComponent(currentDeleteFileId)}`, {
             method: 'DELETE',
             headers: { 
                 'X-CSRFToken': csrfToken,
@@ -397,14 +466,24 @@ async function deleteFile(fileId, displayName = 'this file') {
             body: JSON.stringify({ password: password })
         });
         const result = await response.json();
+        
+        setButtonLoading(deleteConfirmBtn, false);
+        
         showToast(result.message, result.success);
         
         if (result.success) {
+            closeDeleteModal();
             loadFiles();
         }
     } catch {
+        setButtonLoading(deleteConfirmBtn, false);
         showToast('❌ Could not delete file.', false);
     }
+});
+
+async function deleteFile(fileId, displayName = 'this file') {
+    // Show custom modal instead of browser prompt
+    showDeleteModal(fileId, displayName);
 }
 
 // Refresh button
