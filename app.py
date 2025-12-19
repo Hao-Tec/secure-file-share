@@ -463,6 +463,12 @@ def list_files():
                             meta_path = get_metadata_path(enc_path)
                             if os.path.exists(meta_path):
                                 os.remove(meta_path)
+                            
+                            # Clean up cache for expired files
+                            if enc_path in _metadata_cache:
+                                cached_data = _metadata_cache.pop(enc_path)['data']
+                                if 'share_token' in cached_data and cached_data['share_token'] in _token_cache:
+                                    del _token_cache[cached_data['share_token']]
                         except Exception:
                             pass
                         continue
