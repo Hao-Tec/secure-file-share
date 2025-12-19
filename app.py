@@ -276,7 +276,7 @@ def share_page(token):
     
     if not filename or not metadata:
         # If not found, it might be expired or never existed.
-        return render_template("expired.html"), 404
+        return render_template("expired.html", reason=None), 404
     
     if is_file_expired(metadata):
         # Clean up expired file from DB
@@ -284,7 +284,7 @@ def share_page(token):
             database.delete_file(filename)
         except Exception:
             pass
-        return render_template("expired.html"), 410  # Gone
+        return render_template("expired.html", reason='expired'), 410  # Gone
     
     time_remaining = get_time_remaining(metadata)
     
@@ -441,7 +441,7 @@ def rate_limit_exceeded(error):
 @app.errorhandler(410)
 def gone(error):
     """Handle expired resource error."""
-    return render_template("expired.html"), 410
+    return render_template("expired.html", reason='expired'), 410
 
 
 @app.errorhandler(500)

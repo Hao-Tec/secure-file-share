@@ -1,10 +1,10 @@
-<!-- templates/expired.html - File expired page -->
+<!-- templates/expired.html - File expired/deleted page -->
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>🔐 File Expired</title>
+    <title>🔐 File Unavailable</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -14,12 +14,21 @@
       <div class="text-center">
         <div class="card shadow-sm mx-auto" style="max-width: 500px;">
           <div class="card-body py-5">
-            <div class="fs-1 mb-3">⏰</div>
-            <h2 class="text-warning">File Expired</h2>
-            <p class="text-muted mb-4">
-              This file has expired and been automatically deleted.<br>
-              Files are kept for 7 days after upload.
-            </p>
+            {% if reason == 'deleted' %}
+              <div class="fs-1 mb-3">🗑️</div>
+              <h2 class="text-danger">File Deleted</h2>
+              <p class="text-muted mb-4">
+                This file has been manually deleted by its owner.<br>
+                It is no longer available for download.
+              </p>
+            {% else %}
+              <div class="fs-1 mb-3">⏰</div>
+              <h2 class="text-warning">File Expired</h2>
+              <p class="text-muted mb-4">
+                This file has expired and been automatically deleted.<br>
+                Files are kept for 7 days after upload.
+              </p>
+            {% endif %}
             <a href="/" class="btn btn-primary">← Go to Main Page</a>
           </div>
         </div>
