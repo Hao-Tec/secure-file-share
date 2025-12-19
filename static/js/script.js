@@ -242,24 +242,21 @@ document.getElementById('upload-form')?.addEventListener('submit', async functio
 });
 
 // ================== DOWNLOAD HANDLING ==================
-document.getElementById('download-form')?.addEventListener('submit', async function(e) {
-    e.preventDefault();
+document.getElementById('download-form')?.addEventListener('submit', async function(e) {e.preventDefault();
     
     const form = e.target;
     const downloadBtn = document.getElementById('download-btn');
-    const password = document.getElementById('password')?.value;
+    
+    // Check if we're on share page or main page
+    const isSharePage = window.location.pathname.startsWith('/share/');
+    
+    // Get password from appropriate input field
+    const password = isSharePage 
+        ? document.getElementById('password')?.value 
+        : document.getElementById('password_dl')?.value;
     
     if (!password) {
         showToast('❌ Password is required.', false);
-        return;
-    }
-    
-    // Extract token from URL (e.g., /share/abc123)
-    const pathParts = window.location.pathname.split('/');
-    const token = pathParts[pathParts.length - 1];
-    
-    if (!token) {
-        showToast('❌ Invalid share link.', false);
         return;
     }
     
@@ -267,14 +264,60 @@ document.getElementById('download-form')?.addEventListener('submit', async funct
     showToast('🔄 Preparing your download...', true);
     
     try {
-        const response = await fetch(`/api/download/${token}`, {
-            method: 'POST',
-            headers: { 
-                'X-CSRFToken': csrfToken,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ password: password })
-        });
+        let response;
+        
+        if (isSharePage) {
+            // Share page: use token from URL
+            const pathParts = window.location.pathname.split('/');
+            const token = pathParts[pathParts.length - 1];
+            
+            if (!token) {
+                showToast('❌ Invalid share link.', false);
+                setButtonLoading(downloadBtn, false);
+                return;
+            }
+            
+            response = await fetch(`/api/download/${token}`, {
+                method: 'POST',
+                headers: { 
+                    'X-CSRFToken': csrfToken,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ password: password })
+            });
+        } else {
+            // Main page: use filename from form
+            const filename = document.getElementById('filename')?.value;
+            
+            if (!filename) {
+                showToast('❌ Filename is required.', false);
+                setButtonLoading(downloadBtn, false);
+                return;
+            }
+            
+            // Find the share token for this filename from the files list
+            const filesResponse = await fetch('/api/files', {
+                headers: { 'X-CSRFToken': csrfToken }
+            });
+            const filesResult = await filesResponse.json();
+            
+            const file = filesResult.files?.find(f => f.name === filename);
+            
+            if (!file || !file.share_token) {
+                showToast('❌ File not found.', false);
+                setButtonLoading(downloadBtn, false);
+                return;
+            }
+            
+            response = await fetch(`/api/download/${file.share_token}`, {
+                method: 'POST',
+                headers: { 
+                    'X-CSRFToken': csrfToken,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ password: password })
+            });
+        }
         
         const contentType = response.headers.get('content-type');
         
@@ -291,7 +334,7 @@ document.getElementById('download-form')?.addEventListener('submit', async funct
             
             showToast('✅ File decrypted and downloading...', true);
             
-            const filename = form.filename.value || 'downloaded_file';
+            const filename = form.filename?.value || 'downloaded_file';
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
             link.download = filename;
@@ -301,7 +344,8 @@ document.getElementById('download-form')?.addEventListener('submit', async funct
             URL.revokeObjectURL(link.href);
             form.reset();
         }
-    } catch {
+    } catch (error) {
+        console.error('Download error:', error);
         showToast('❌ Download failed. Please check your inputs.', false);
     } finally {
         setButtonLoading(downloadBtn, false);
