@@ -438,6 +438,27 @@ def gone(error):
     return render_template("expired.html"), 410
 
 
+@app.errorhandler(500)
+def internal_error(error):
+    """Handle internal server errors with JSON."""
+    return jsonify({"success": False, "message": "❌ Internal Server Error. Check logs."}), 500
+
+
+@app.route("/health")
+def health_check():
+    """Check database connection status."""
+    try:
+        # Simple query to check DB
+        with database.get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT 1")
+                cur.fetchone()
+        return jsonify({"status": "healthy", "database": "connected"}), 200
+    except Exception as e:
+        app.logger.error(f"Health check failed: {e}")
+        return jsonify({"status": "unhealthy", "database": str(e)}), 500
+
+
 @app.after_request
 def add_security_headers(response):
     """Add security headers to every response."""
