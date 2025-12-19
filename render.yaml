@@ -1,0 +1,27 @@
+services:
+  # The Web Service (Flask App)
+  - type: web
+    name: secure-file-share
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: secure-share-db
+          property: connectionString
+
+databases:
+  # The Database (PostgreSQL)
+  - name: secure-share-db
+    plan: free
+    databaseName: secure_share
+    user: secure_user
+
+# Note: Render Free Tier now allows Blueprints to create Free DBs.
+# If manual creation is required, this yaml still guides the structure.
