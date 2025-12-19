@@ -104,44 +104,31 @@ A beautiful, secure file sharing application with AES-256 encryption. Upload fil
 - **In-Memory Caching**: Cache metadata to reduce disk I/O by ~85%
 - **O(1) Token Lookup**: Instant share link resolution via hash map optimization
 
-## 🚀 Deployment on Railway
+## 🚀 Deployment on Render
 
-Railway provides free persistent storage, making it perfect for this application.
+This application uses Render's free **Web Service** and free **PostgreSQL** database.
 
-### Quick Deploy
+### 1. Create PostgreSQL Database
+1. Go to your Render Dashboard
+2. Click **New +** -> **PostgreSQL**
+3. Name it (e.g., `secure-share-db`)
+4. Select **Free Plan**
+5. Click **Create Database**
+6. **Copy the "Internal Database URL"** (starts with `postgres://...`)
 
-1. **Fork/Push to GitHub** (if not already done)
+### 2. Deploy Web Service
+1. **Push to GitHub**
+2. **Create Web Service** on Render
+3. Connect your repository
+4. **Environment Variables:**
+   - `SECRET_KEY`: (Large random string)
+   - `FLASK_ENV`: `production`
+   - `DATABASE_URL`: Paste your PostgreSQL Internal URL here
+5. **Build Command:** `pip install -r requirements.txt`
+6. **Start Command:** `gunicorn app:app`
 
-2. **Create Railway Account**
-   - Go to https://railway.app/
-   - Sign in with GitHub (no credit card required for free tier)
-
-3. **Deploy from GitHub**
-   - Click **"New Project"**
-   - Select **"Deploy from GitHub repo"**
-   - Choose your `secure-file-share` repository
-   - Railway will auto-detect the Python app
-
-4. **Add Persistent Volume**
-   - Go to your service
-   - Click **"Volumes"** tab
-   - Click **"New Volume"**
-   - **Mount Path**: `/app/uploads`
-   - Click **"Add"**
-
-5. **Set Environment Variables**
-   - Go to **"Variables"** tab
-   - Add these variables:
-     - `SECRET_KEY`: (Generate a random 32+ character string)
-     - `FLASK_ENV`: `production`
-     - `PYTHON_VERSION`: `3.11.0`
-
-6. **Deploy!**
-   - Railway will automatically deploy
-   - You'll get a public URL like `https://your-app.up.railway.app`
-
-### Files Will Persist! ✅
-With the volume mounted, your uploaded files will survive deployments and restarts.
+### Persistence ✅
+Files are stored securely in the PostgreSQL database, so they persist across redeployments!
 
 ## 🤝 Contributing
 

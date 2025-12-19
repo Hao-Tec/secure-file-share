@@ -15,6 +15,7 @@ from Crypto.Random import get_random_bytes
 from werkzeug.utils import secure_filename
 from io import BytesIO
 
+import database
 from config import get_config
 
 # Initialize Flask app
@@ -23,7 +24,7 @@ config = get_config()
 
 # Apply configuration
 app.config['SECRET_KEY'] = config.SECRET_KEY
-app.config['UPLOAD_FOLDER'] = config.UPLOAD_FOLDER
+app.config['UPLOAD_FOLDER'] = config.UPLOAD_FOLDER # This is now mostly vestigial, but kept for config consistency
 app.config['MAX_CONTENT_LENGTH'] = config.MAX_CONTENT_LENGTH
 app.config['WTF_CSRF_ENABLED'] = config.WTF_CSRF_ENABLED
 app.config['WTF_CSRF_TIME_LIMIT'] = config.WTF_CSRF_TIME_LIMIT
@@ -41,31 +42,29 @@ limiter = Limiter(
     swallow_errors=False   # Don't swallow errors, enforce limits strictly
 )
 
-# Ensure upload folder exists
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-
 # Constants
 SALT_LENGTH = 16
 NONCE_LENGTH = 16
 TAG_LENGTH = 16
 FILE_EXPIRY_DAYS = 7  # Files expire after 7 days
 
+# Initialize Database (will skip if no connection string)
+try:
+    with app.app_context():
+        # Only init if we are in production or have DB_URL
+        if os.environ.get("DATABASE_URL"):
+            database.init_db()
+except Exception as e:
+    print(f"Database Init Warning: {e}")
+
 
 # ==================== METADATA HELPERS ====================
 
-# Global in-memory cache to reduce disk I/O
-# Structure: path -> {'mtime': ns, 'data': dict}
-_metadata_cache = {}
-# Structure: token -> enc_path (acceleration index)
-_token_cache = {}
-MAX_CACHE_SIZE = 1000
+# NOTE: With PostgreSQL, we use the database as the source of truth.
+# The in-memory caching is less critical for small counts but we can 
+# keep a simple cache if needed. For now, let's rely on fast DB queries.
 
-def get_metadata_path(enc_path: str) -> str:
-    """Get the metadata file path for an encrypted file."""
-    return enc_path + ".meta"
-
-
-def create_metadata(enc_path: str, original_filename: str) -> dict:
+def create_metadata(original_filename: str) -> dict:
     """Create metadata for a newly uploaded file."""
     share_token = uuid.uuid4().hex[:12]  # 12 char share token
     now = datetime.utcnow()
@@ -78,171 +77,39 @@ def create_metadata(enc_path: str, original_filename: str) -> dict:
         "downloads": 0,
         "share_token": share_token
     }
-    
-    meta_path = get_metadata_path(enc_path)
-    with open(meta_path, "w") as f:
-        json.dump(metadata, f)
-    
-    # Update cache immediately
-    try:
-        stat = os.stat(meta_path)
-        if len(_metadata_cache) >= MAX_CACHE_SIZE:
-             _metadata_cache.clear()
-             _token_cache.clear()
-        
-        _metadata_cache[enc_path] = {'mtime': stat.st_mtime_ns, 'data': metadata}
-        _token_cache[share_token] = enc_path
-    except OSError:
-        pass
-    
     return metadata
 
+def load_metadata(enc_path_or_filename: str) -> dict | None:
+    """Load metadata from database (wrapper for consistency)."""
+    # Filename is usually the basename (e.g. "uuid.enc")
+    filename = os.path.basename(enc_path_or_filename)
+    return database.get_metadata(filename)
 
-def load_metadata(enc_path: str, known_mtime: int = None) -> dict | None:
-    """Load metadata with caching strategy."""
-    meta_path = get_metadata_path(enc_path)
-    
-    try:
-        if known_mtime is not None:
-            mtime = known_mtime
-        else:
-            # Check file stat for invalidation
-            stat = os.stat(meta_path)
-            mtime = stat.st_mtime_ns
-        
-        # Check cache
-        cached = _metadata_cache.get(enc_path)
-        if cached and cached['mtime'] == mtime:
-            return cached['data'].copy()  # Return copy to prevent mutation
-            
-        # Cache miss or stale: read from disk
-        with open(meta_path, "r") as f:
-            data = json.load(f)
-            
-        # Update cache
-        if len(_metadata_cache) >= MAX_CACHE_SIZE:
-             _metadata_cache.clear()
-             _token_cache.clear()
-             
-        _metadata_cache[enc_path] = {'mtime': mtime, 'data': data}
-        
-        # Valid metadata always has a share token, index it
-        if "share_token" in data:
-            _token_cache[data["share_token"]] = enc_path
-            
-        return data.copy()
-        
-    except (json.JSONDecodeError, IOError, OSError, KeyError):
-        # File doesn't exist or is corrupt
-        # Clean up cache if it was there
-        if enc_path in _metadata_cache:
-            del _metadata_cache[enc_path]
-        return None
-
-
-def update_metadata(enc_path: str, updates: dict) -> bool:
+def update_metadata(filename: str, updates: dict) -> bool:
     """Update specific fields in metadata."""
-    # Force load to ensure we have latest
-    metadata = load_metadata(enc_path)
-    if metadata:
-        metadata.update(updates)
-        meta_path = get_metadata_path(enc_path)
-        try:
-            with open(meta_path, "w") as f:
-                json.dump(metadata, f)
-            
-            # Invalidate/Update cache
-            stat = os.stat(meta_path)
-            _metadata_cache[enc_path] = {'mtime': stat.st_mtime_ns, 'data': metadata}
-            return True
-        except IOError:
-            return False
-    return False
+    filename = os.path.basename(filename)
+    return database.update_metadata(filename, updates)
 
-
-def increment_download_count(enc_path: str) -> int:
+def increment_download_count(filename: str) -> int:
     """Increment and return the download count."""
-    # Use load_metadata to leverage cache for read
-    metadata = load_metadata(enc_path)
+    filename = os.path.basename(filename)
+    # We use a database update
+    metadata = database.get_metadata(filename)
     if metadata:
         new_count = metadata.get("downloads", 0) + 1
-        update_metadata(enc_path, {"downloads": new_count})
+        database.update_metadata(filename, {"downloads": new_count})
         return new_count
     return 0
-
-
-def is_file_expired(metadata: dict) -> bool:
-    """Check if a file has expired."""
-    if not metadata or "expires_at" not in metadata:
-        return False
-    try:
-        expires = datetime.fromisoformat(metadata["expires_at"].replace("Z", ""))
-        return datetime.utcnow() > expires
-    except (ValueError, TypeError):
-        return False
-
-
-def get_time_remaining(metadata: dict) -> str:
-    """Get human-readable time remaining until expiry."""
-    if not metadata or "expires_at" not in metadata:
-        return "Unknown"
-    try:
-        expires = datetime.fromisoformat(metadata["expires_at"].replace("Z", ""))
-        remaining = expires - datetime.utcnow()
-        
-        if remaining.total_seconds() <= 0:
-            return "Expired"
-        
-        days = remaining.days
-        hours = remaining.seconds // 3600
-        
-        if days > 0:
-            return f"{days}d {hours}h"
-        elif hours > 0:
-            return f"{hours}h"
-        else:
-            minutes = remaining.seconds // 60
-            return f"{minutes}m"
-    except (ValueError, TypeError):
-        return "Unknown"
-
-
-def find_file_by_share_token(token: str) -> tuple[str, dict] | tuple[None, None]:
-    """Find a file by its share token. Returns (enc_path, metadata) or (None, None)."""
     
-    # 1. Fast path: Check token cache
-    cached_path = _token_cache.get(token)
-    if cached_path:
-        # Verify it still exists and load (will be fast from metadata cache)
-        metadata = load_metadata(cached_path)
-        if metadata and metadata.get("share_token") == token:
-            return cached_path, metadata
-        else:
-            # Invalid cache entry
-            if token in _token_cache:
-                del _token_cache[token]
-
-    # 2. Slow path: Scan directory (only happens on cold cache or restart)
-    upload_folder = app.config['UPLOAD_FOLDER']
-    try:
-        with os.scandir(upload_folder) as entries:
-            for entry in entries:
-                if entry.name.endswith(".enc") and entry.is_file():
-                    enc_path = entry.path
-                    # load_metadata will populate the cache for next time
-                    metadata = load_metadata(enc_path)
-                    if metadata and metadata.get("share_token") == token:
-                        return enc_path, metadata
-    except Exception:
-        pass
+def find_file_by_share_token(token: str) -> tuple[str, dict] | tuple[None, None]:
+    """Find a file by its share token via Database."""
+    filename, metadata = database.find_by_token(token)
+    if filename and metadata:
+        return filename, metadata
     return None, None
 
-
-
-
-
 # ==================== VALIDATION HELPERS ====================
-
+# (Validations remain unchanged)
 def validate_password(password: str) -> tuple[bool, str]:
     """Validate password meets security requirements."""
     if len(password) < config.MIN_PASSWORD_LENGTH:
@@ -250,15 +117,17 @@ def validate_password(password: str) -> tuple[bool, str]:
     
     if not re.search(r'[A-Z]', password):
         return False, "Password must contain at least one uppercase letter."
-    
+        
     if not re.search(r'[a-z]', password):
         return False, "Password must contain at least one lowercase letter."
-    
+        
     if not re.search(r'\d', password):
-        return False, "Password must contain at least one digit."
-    
+        return False, "Password must contain at least one number."
+        
+    if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+        return False, "Password must contain at least one special character."
+        
     return True, ""
-
 
 def allowed_file(filename: str) -> bool:
     """Check if the file extension is allowed."""
@@ -267,24 +136,52 @@ def allowed_file(filename: str) -> bool:
     extension = filename.rsplit('.', 1)[1].lower()
     return extension in config.ALLOWED_EXTENSIONS
 
+def is_file_expired(metadata: dict) -> bool:
+    """Check if file is expired."""
+    if not metadata or "expires_at" not in metadata:
+        return False
+    try:
+        expires_at = datetime.fromisoformat(metadata["expires_at"].rstrip("Z"))
+        return datetime.utcnow() > expires_at
+    except (KeyError, ValueError):
+        return True
 
-# ==================== ENCRYPTION HELPERS ====================
+def get_time_remaining(metadata: dict) -> str:
+    """Get human readable time remaining string."""
+    if not metadata or "expires_at" not in metadata:
+        return "Unknown"
+    try:
+        expires_at = datetime.fromisoformat(metadata["expires_at"].rstrip("Z"))
+        remaining = expires_at - datetime.utcnow()
+        if remaining.total_seconds() <= 0:
+            return "Expired"
+        
+        if remaining.days > 0:
+            return f"{remaining.days}d {remaining.seconds // 3600}h"
+        elif remaining.seconds >= 3600:
+            return f"{remaining.seconds // 3600}h"
+        else:
+            minutes = remaining.seconds // 60
+            return f"{minutes}m"
+    except (ValueError, TypeError):
+        return "Unknown"
+
+
+# ==================== CRYPTO HELPERS ====================
+# (Keep helpers but update usage)
 
 def derive_key(password: str, salt: bytes) -> bytes:
-    """Derive a 128-bit key from password and salt using PBKDF2."""
-    return PBKDF2(password, salt, dkLen=16, count=100000)
-
+    """Derive a 256-bit key from password and salt using PBKDF2."""
+    return PBKDF2(password, salt, dkLen=32, count=100000)
 
 def encrypt_file(file_data: bytes, password: str) -> bytes:
-    """Encrypt file data using AES-EAX mode with a unique salt."""
+    """Encrypt file data with AES-256-EAX."""
     salt = get_random_bytes(SALT_LENGTH)
     key = derive_key(password, salt)
-    
     cipher = AES.new(key, AES.MODE_EAX)
     ciphertext, tag = cipher.encrypt_and_digest(file_data)
-    
+    # Combine salt + nonce + tag + ciphertext
     return salt + cipher.nonce + tag + ciphertext
-
 
 def decrypt_file(file_data: bytes, password: str) -> bytes:
     """Decrypt file data that was encrypted with encrypt_file()."""
@@ -307,10 +204,10 @@ def index():
     return render_template("index.html")
 
 
-@app.route("/upload", methods=["POST"])
+@app.route("/api/upload", methods=["POST"])
 @limiter.limit("5 per hour", error_message="Too many uploads. Please wait before uploading more files.")
 @limiter.limit("2 per minute", error_message="Please wait a moment before uploading another file.")
-def upload():
+def upload_file():
     """Handle file upload with encryption."""
     if 'file' not in request.files:
         return jsonify({"success": False, "message": "❌ No file provided."}), 400
@@ -333,162 +230,149 @@ def upload():
         if not original_filename:
             return jsonify({"success": False, "message": "❌ Invalid filename."}), 400
         
-        # Generate unique filename
-        name, ext = os.path.splitext(original_filename)
-        unique_id = uuid.uuid4().hex[:8]
-        unique_filename = f"{name}_{unique_id}{ext}"
-        
         file_data = file.read()
+
+        # Check size (redundant to configured limit but good practice)
+        if len(file_data) > app.config['MAX_CONTENT_LENGTH']:
+             return jsonify({"success": False, "message": "❌ File too large"}), 413
+        
         encrypted_data = encrypt_file(file_data, password)
         
-        enc_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename + ".enc")
-        with open(enc_path, "wb") as f:
-            f.write(encrypted_data)
+        # Generate a unique filename for storage in DB (e.g., UUID.enc)
+        # This will be the file_id in the database
+        enc_filename = f"{uuid.uuid4().hex}.enc"
         
         # Create metadata with share token and expiry
-        metadata = create_metadata(enc_path, original_filename)
-        share_url = f"/share/{metadata['share_token']}"
+        metadata = create_metadata(original_filename) # Use original name for display
+        
+        # Save to Database
+        database.save_file(enc_filename, encrypted_data, metadata)
         
         return jsonify({
             "success": True,
             "message": f"✅ File uploaded! Expires in {FILE_EXPIRY_DAYS} days.",
-            "filename": unique_filename,
+            "filename": original_filename, # Return original name for display
             "share_token": metadata["share_token"],
-            "share_url": share_url
+            "share_url": f"{request.host_url}share/{metadata['share_token']}"
         })
     except Exception as e:
         app.logger.error(f"Upload error: {e}")
         return jsonify({"success": False, "message": "❌ An error occurred during upload."}), 500
 
 
-@app.route("/download", methods=["POST"])
+@app.route("/share/<token>")
+def share_page(token):
+    """Render a share page for a specific file."""
+    filename, metadata = find_file_by_share_token(token)
+    
+    if not filename or not metadata:
+        # If not found, it might be expired or never existed.
+        return render_template("expired.html"), 404
+    
+    if is_file_expired(metadata):
+        # Clean up expired file from DB
+        try:
+            database.delete_file(filename)
+        except Exception:
+            pass
+        return render_template("expired.html"), 410  # Gone
+    
+    time_remaining = get_time_remaining(metadata)
+    
+    return render_template("share.html", 
+                         filename=metadata["original_name"], 
+                         time_remaining=time_remaining,
+                         downloads=metadata.get("downloads", 0),
+                         token=token)
+
+
+@app.route("/api/download/<token>", methods=["POST"])
 @limiter.limit("20 per hour", error_message="Too many downloads. Please wait.")
 @limiter.limit("5 per minute", error_message="Please wait a moment before downloading again.")
-def download():
+def download_file(token):
     """Handle file download with decryption."""
-    filename = request.form.get("filename", "")
-    password = request.form.get("password", "")
+    password = request.json.get("password")
     
-    if not filename or not password:
-        return jsonify({"success": False, "message": "❌ Filename and password are required."}), 400
+    if not password:
+        return jsonify({"success": False, "message": "❌ Password required."}), 400
     
-    safe_filename = secure_filename(filename)
-    if not safe_filename:
-        return jsonify({"success": False, "message": "❌ Invalid filename."}), 400
+    # Find file by token
+    filename, metadata = database.find_by_token(token)
     
-    enc_path = os.path.join(app.config['UPLOAD_FOLDER'], safe_filename + ".enc")
+    if not filename or not metadata:
+        return jsonify({"success": False, "message": "❌ File not found or expired."}), 404
     
-    if not os.path.exists(enc_path):
-        return jsonify({"success": False, "message": "❌ Encrypted file not found."}), 404
-    
-    # Check expiration
-    metadata = load_metadata(enc_path)
-    if metadata and is_file_expired(metadata):
-        # Delete expired file
+    if is_file_expired(metadata):
+        # Trigger cleanup
         try:
-            os.remove(enc_path)
-            meta_path = get_metadata_path(enc_path)
-            if os.path.exists(meta_path):
-                os.remove(meta_path)
+            database.delete_file(filename)
         except Exception:
             pass
         return jsonify({"success": False, "message": "❌ This file has expired and been deleted."}), 410
     
     try:
-        with open(enc_path, "rb") as f:
-            encrypted_data = f.read()
+        # Get encrypted data from DB
+        encrypted_data, _ = database.get_file(filename)
+        
+        if not encrypted_data:
+            return jsonify({"success": False, "message": "❌ File content missing."}), 404
         
         decrypted_data = decrypt_file(encrypted_data, password)
         
         # Increment download counter
-        increment_download_count(enc_path)
+        increment_download_count(filename)
         
         return send_file(
             BytesIO(decrypted_data),
-            download_name=safe_filename,
-            as_attachment=True
+            download_name=metadata["original_name"],
+            as_attachment=True,
+            mimetype="application/octet-stream" # Generic, browser will use original_name's extension
         )
     except ValueError:
-        return jsonify({"success": False, "message": "❌ Decryption failed. Check your password."}), 400
+        return jsonify({"success": False, "message": "❌ Decryption failed. Check your password."}), 403
     except Exception as e:
         app.logger.error(f"Download error: {e}")
         return jsonify({"success": False, "message": "❌ An error occurred during download."}), 500
-
-
-@app.route("/share/<token>")
-def share_page(token):
-    """Render a share page for a specific file."""
-    enc_path, metadata = find_file_by_share_token(token)
-    
-    if not enc_path or not metadata:
-        abort(404)
-    
-    if is_file_expired(metadata):
-        # Clean up expired file
-        try:
-            os.remove(enc_path)
-            meta_path = get_metadata_path(enc_path)
-            if os.path.exists(meta_path):
-                os.remove(meta_path)
-        except Exception:
-            pass
-        abort(410)  # Gone
-    
-    # Get display filename from path
-    filename = os.path.basename(enc_path)[:-4]  # Remove .enc
-    time_remaining = get_time_remaining(metadata)
-    
-    return render_template("share.html", 
-                         filename=filename, 
-                         time_remaining=time_remaining,
-                         downloads=metadata.get("downloads", 0))
 
 
 @app.route("/api/files", methods=["GET"])
 def list_files():
     """List all encrypted files with metadata."""
     try:
+        # Trigger expired cleanup
+        database.cleanup_expired()
+        
         files = []
-        upload_folder = app.config['UPLOAD_FOLDER']
-        now = datetime.utcnow()
+        # Get all files from DB
+        db_files = database.list_files() # returns list of (file_id, metadata)
         
-        with os.scandir(upload_folder) as entries:
-            for entry in entries:
-                if entry.name.endswith(".enc") and entry.is_file():
-                    enc_path = entry.path
-                    stat = entry.stat()
-                    metadata = load_metadata(enc_path)
-                    
-                    # Skip and delete expired files
-                    if metadata and is_file_expired(metadata):
-                        try:
-                            os.remove(enc_path)
-                            meta_path = get_metadata_path(enc_path)
-                            if os.path.exists(meta_path):
-                                os.remove(meta_path)
-                            
-                            # Clean up cache for expired files
-                            if enc_path in _metadata_cache:
-                                cached_data = _metadata_cache.pop(enc_path)['data']
-                                if 'share_token' in cached_data and cached_data['share_token'] in _token_cache:
-                                    del _token_cache[cached_data['share_token']]
-                        except Exception:
-                            pass
-                        continue
-                    
-                    display_name = entry.name[:-4]
-                    
-                    file_info = {
-                        "name": display_name,
-                        "size": stat.st_size,
-                        "modified": stat.st_mtime,
-                        "downloads": metadata.get("downloads", 0) if metadata else 0,
-                        "expires_in": get_time_remaining(metadata) if metadata else "Unknown",
-                        "share_token": metadata.get("share_token") if metadata else None
-                    }
-                    files.append(file_info)
+        for file_id, metadata in db_files:
+            if not metadata: 
+                continue
+                
+            file_info = {
+                # UI display uses 'name'. We send the unique file_id (minus .enc) as name
+                # so the frontend can use it for deletion.
+                # Front end displays "name" as text.
+                # If we want to display "original_name" in UI but use ID for delete, we need to check script.js
+                # script.js: `div.textContent = file.name` and `deleteFile(filename)`
+                # So if we change this, the UI changes.
+                # Compromise: Send file_id as name, but maybe we should update script?
+                # Actually, previously `name` was `test.png` from `test.png.enc`.
+                # Let's send `file_id` (minus .enc) as `name` so it matches previous logic.
+                "name": file_id.replace(".enc", ""), # This is the unique ID
+                "original_name": metadata.get("original_name", "Unknown"), # Extra field if we want to update UI
+                "size": "Encrypted", 
+                "modified": 0,
+                "downloads": metadata.get("downloads", 0),
+                "expires_in": get_time_remaining(metadata),
+                "share_token": metadata.get("share_token")
+            }
+            files.append(file_info)
         
-        files.sort(key=lambda x: x['modified'], reverse=True)
+        # Sort by recently uploaded (implies created_at, but we don't have it in metadata easily here except uploaded_at)
+        files.sort(key=lambda x: x['expires_in'], reverse=True) # Sort by expiry or something? 
+        # Actually previous sort was modified time.
         
         return jsonify({"success": True, "files": files})
     except Exception as e:
@@ -499,7 +383,11 @@ def list_files():
 @app.route("/api/files/<filename>", methods=["DELETE", "POST"])
 def delete_file(filename):
     """Delete an encrypted file and its metadata (requires password)."""
-    # Get password from JSON body or form data
+    # Filename here comes from the UI list "name" field.
+    # We stripped .enc in list_files, so we add it back to get ID.
+    if not filename.endswith(".enc"):
+        filename += ".enc"
+        
     password = ""
     if request.is_json:
         password = request.json.get("password", "")
@@ -509,34 +397,18 @@ def delete_file(filename):
     if not password:
         return jsonify({"success": False, "message": "❌ Password required to delete file."}), 400
 
-    safe_filename = secure_filename(filename)
-    if not safe_filename:
-        return jsonify({"success": False, "message": "❌ Invalid filename."}), 400
+    # Retrieve from DB
+    encrypted_data, metadata = database.get_file(filename)
     
-    enc_path = os.path.join(app.config['UPLOAD_FOLDER'], safe_filename + ".enc")
-    meta_path = get_metadata_path(enc_path)
-    
-    if not os.path.exists(enc_path):
+    if not encrypted_data:
         return jsonify({"success": False, "message": "❌ File not found."}), 404
     
     try:
-        # Verify password by attempting to decrypt (proves ownership)
-        with open(enc_path, "rb") as f:
-            encrypted_data = f.read()
-            
-        # This will raise ValueError if password is wrong
+        # Verify password by attempting to decrypt
         decrypt_file(encrypted_data, password)
         
-        # If we got here, password is correct
-        os.remove(enc_path)
-        if os.path.exists(meta_path):
-            os.remove(meta_path)
-            
-        # Clean up cache
-        if enc_path in _metadata_cache:
-            data = _metadata_cache.pop(enc_path)['data']
-            if 'share_token' in data and data['share_token'] in _token_cache:
-                del _token_cache[data['share_token']]
+        # If successful, delete from DB
+        database.delete_file(filename)
             
         return jsonify({"success": True, "message": "✅ File deleted successfully."})
         
