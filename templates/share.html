@@ -46,7 +46,7 @@
             </div>
           </div>
           
-          <button class="btn btn-outline-primary btn-sm mb-3" type="button" data-bs-toggle="collapse" data-bs-target="#qrCodeCollapse" aria-expanded="false" aria-controls="qrCodeCollapse" onclick="generateQR()">
+          <button class="btn btn-outline-primary btn-sm mb-3" type="button" data-bs-toggle="collapse" data-bs-target="#qrCodeCollapse" aria-expanded="false" aria-controls="qrCodeCollapse" id="qr-btn">
             📱 Show QR Code
           </button>
           <div class="collapse" id="qrCodeCollapse">
@@ -59,22 +59,6 @@
       </div>
 
 <script src="{{ url_for('static', filename='js/qrcode.min.js') }}?v=2"></script>
-<script>
-let qrGenerated = false;
-function generateQR() {
-    if (qrGenerated) return;
-    const shareUrl = window.location.href;
-    new QRCode(document.getElementById("qrcode"), {
-        text: shareUrl,
-        width: 128,
-        height: 128,
-        colorDark : "#000000",
-        colorLight : "#ffffff",
-        correctLevel : QRCode.CorrectLevel.H
-    });
-    qrGenerated = true;
-}
-</script>
 
       <!-- Download Form -->
       <div class="card shadow-sm">
