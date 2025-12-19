@@ -104,31 +104,27 @@ A beautiful, secure file sharing application with AES-256 encryption. Upload fil
 - **In-Memory Caching**: Cache metadata to reduce disk I/O by ~85%
 - **O(1) Token Lookup**: Instant share link resolution via hash map optimization
 
-## 🚀 Deployment on Render
+## 🚀 Deployment on Render (1-Click)
 
-This application uses Render's free **Web Service** and free **PostgreSQL** database.
+We use Render "Blueprints" to automatically create both the database and web service for you.
 
-### 1. Create PostgreSQL Database
-1. Go to your Render Dashboard
-2. Click **New +** -> **PostgreSQL**
-3. Name it (e.g., `secure-share-db`)
-4. Select **Free Plan**
-5. Click **Create Database**
-6. **Copy the "Internal Database URL"** (starts with `postgres://...`)
+### 1. Push to GitHub
+Make sure your code is pushed to your GitHub repository.
 
-### 2. Deploy Web Service
-1. **Push to GitHub**
-2. **Create Web Service** on Render
-3. Connect your repository
-4. **Environment Variables:**
-   - `SECRET_KEY`: (Large random string)
-   - `FLASK_ENV`: `production`
-   - `DATABASE_URL`: Paste your PostgreSQL Internal URL here
-5. **Build Command:** `pip install -r requirements.txt`
-6. **Start Command:** `gunicorn app:app`
+### 2. Create Blueprint
+1. Go to your **Render Dashboard**
+2. Click **New +** -> **Blueprint Instance**
+3. Connect your repository (`secure-file-share`)
+4. Click **Apply**
 
-### Persistence ✅
-Files are stored securely in the PostgreSQL database, so they persist across redeployments!
+### 3. That's it! 🎉
+Render will automatically:
+- ✅ Create a free PostgreSQL database
+- ✅ Create the web service (`cipher-vault`)
+- ✅ Link them securely (setting `DATABASE_URL` automatically)
+- ✅ Deploy the app
+
+Once finished, your app will be live and your files will persist forever!
 
 ## 🤝 Contributing
 
