@@ -77,6 +77,14 @@ dropZone?.addEventListener('click', () => {
     fileInput?.click();
 });
 
+// Drop zone keyboard access
+dropZone?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        fileInput?.click();
+    }
+});
+
 // Drop zone drag events
 dropZone?.addEventListener('dragover', () => {
     dropZone.classList.add('drag-over');
