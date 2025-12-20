@@ -1,9 +1,7 @@
-# Bolt's Journal
+## 2024-05-23 - DOM Manipulation Bottlenecks
+**Learning:** Appending elements to the DOM individually inside a loop triggers a reflow/repaint for each iteration, which is a major performance bottleneck for lists.
+**Action:** Use `DocumentFragment` to batch DOM updates. Build the entire subtree in the fragment and append it to the DOM once.
 
-## 2024-05-23 - [Initial Setup]
-**Learning:** Initialized Bolt's journal for tracking performance learnings.
-**Action:** Document critical performance insights here.
-
-## 2024-05-23 - [Directory Scanning Optimization]
-**Learning:** `os.scandir` caches `stat` info (like `st_mtime`) on many OSes. Accessing this via `DirEntry.stat()` avoids extra `os.stat` syscalls.
-**Action:** Always check if `DirEntry` objects are available before calling `os.stat` in file processing loops.
+## 2024-05-23 - Ephemeral Testing
+**Learning:** Creating temporary mock servers and verification scripts is excellent for isolating and testing frontend logic without backend dependencies, but these files MUST be deleted before submission.
+**Action:** Always clean up `tests/mock_*.py` and `tests/verify_*.py` files before the final commit.
