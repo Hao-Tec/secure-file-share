@@ -3,7 +3,6 @@ import json
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from datetime import datetime, timedelta
-from urllib.parse import urlparse
 
 # Global DB connection string
 DATABASE_URL = os.environ.get("DATABASE_URL")

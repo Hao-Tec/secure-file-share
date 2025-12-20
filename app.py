@@ -3,7 +3,6 @@ import os
 import re
 import uuid
 import json
-import time
 from datetime import datetime, timedelta
 from flask import Flask, request, render_template, send_file, jsonify, abort
 from flask_wtf.csrf import CSRFProtect
@@ -79,34 +78,8 @@ def create_metadata(original_filename: str) -> dict:
     }
     return metadata
 
-def load_metadata(enc_path_or_filename: str) -> dict | None:
-    """Load metadata from database (wrapper for consistency)."""
-    # Filename is usually the basename (e.g. "uuid.enc")
-    filename = os.path.basename(enc_path_or_filename)
-    return database.get_metadata(filename)
-
-def update_metadata(filename: str, updates: dict) -> bool:
-    """Update specific fields in metadata."""
-    filename = os.path.basename(filename)
-    return database.update_metadata(filename, updates)
-
-def increment_download_count(filename: str) -> int:
-    """Increment and return the download count."""
-    filename = os.path.basename(filename)
-    # We use a database update
-    metadata = database.get_metadata(filename)
-    if metadata:
-        new_count = metadata.get("downloads", 0) + 1
-        database.update_metadata(filename, {"downloads": new_count})
-        return new_count
-    return 0
-    
-def find_file_by_share_token(token: str) -> tuple[str, dict] | tuple[None, None]:
-    """Find a file by its share token via Database."""
-    filename, metadata = database.find_by_token(token)
-    if filename and metadata:
-        return filename, metadata
-    return None, None
+# Wrappers removed (load_metadata, update_metadata, find_file_by_share_token)
+# Direct database calls are used instead.
 
 # ==================== VALIDATION HELPERS ====================
 # (Validations remain unchanged)
@@ -272,7 +245,7 @@ def upload_file():
 @app.route("/share/<token>")
 def share_page(token):
     """Render a share page for a specific file."""
-    filename, metadata = find_file_by_share_token(token)
+    filename, metadata = database.find_by_token(token)
     
     if not filename or not metadata:
         # If not found, it might be expired or never existed.
@@ -336,7 +309,9 @@ def download_file(token):
         decrypted_data = decrypt_file(encrypted_data, password)
         
         # Increment download counter
-        increment_download_count(filename)
+        if metadata:
+            new_count = metadata.get("downloads", 0) + 1
+            database.update_metadata(filename, {"downloads": new_count})
         
         return send_file(
             BytesIO(decrypted_data),
