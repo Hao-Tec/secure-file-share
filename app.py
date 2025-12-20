@@ -413,8 +413,8 @@ def delete_file(file_id):
         # Verify password by attempting to decrypt
         decrypt_file(encrypted_data, password)
         
-        # If successful, delete from DB
-        database.delete_file(file_id)
+        # If successful, soft delete (mark as deleted, clear data)
+        database.mark_as_deleted(file_id)
             
         return jsonify({"success": True, "message": "✅ File deleted successfully."})
         

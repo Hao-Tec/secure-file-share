@@ -132,13 +132,38 @@ def delete_file(filename):
         cur.close()
         conn.close()
 
-def list_files():
-    """List all files returning (filename, metadata)."""
+def mark_as_deleted(filename):
+    """Soft delete a file: Clear data to save space, but keep metadata with deleted flag."""
     conn = get_db_connection()
     cur = conn.cursor()
     
     try:
-        cur.execute("SELECT file_id, metadata FROM encrypted_files")
+        # Update metadata with deleted_at and clear encrypted_data
+        cur.execute("""
+            UPDATE encrypted_files 
+            SET encrypted_data = %s,
+                metadata = metadata || jsonb_build_object('deleted_at', to_json(CURRENT_TIMESTAMP)::text)
+            WHERE file_id = %s
+        """, (psycopg2.Binary(b''), filename))
+        
+        conn.commit()
+        return True
+    finally:
+        cur.close()
+        conn.close()
+
+def list_files():
+    """List all ACTIVE files returning (filename, metadata). Excludes soft-deleted files."""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    try:
+        # Filter out files that have the 'deleted_at' key in metadata
+        cur.execute("""
+            SELECT file_id, metadata 
+            FROM encrypted_files 
+            WHERE NOT (metadata ? 'deleted_at')
+        """)
         results = cur.fetchall()
         return [(r['file_id'], r['metadata']) for r in results]
     finally:
@@ -146,7 +171,7 @@ def list_files():
         conn.close()
 
 def find_by_token(token):
-    """Find a file by its share token."""
+    """Find a file by its share token (includes deleted files so we can show message)."""
     conn = get_db_connection()
     cur = conn.cursor()
     
