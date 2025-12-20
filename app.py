@@ -277,6 +277,10 @@ def share_page(token):
     if not filename or not metadata:
         # If not found, it might be expired or never existed.
         return render_template("expired.html", reason=None), 404
+        
+    # Check if manually deleted
+    if metadata.get('deleted_at'):
+        return render_template("expired.html", reason='deleted'), 410
     
     if is_file_expired(metadata):
         # Clean up expired file from DB
@@ -310,6 +314,9 @@ def download_file(token):
     
     if not filename or not metadata:
         return jsonify({"success": False, "message": "❌ File not found or expired."}), 404
+        
+    if metadata.get('deleted_at'):
+        return jsonify({"success": False, "message": "❌ File has been deleted by the owner."}), 410
     
     if is_file_expired(metadata):
         # Trigger cleanup
