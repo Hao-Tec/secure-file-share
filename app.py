@@ -2,10 +2,11 @@
 import os
 import re
 import uuid
-import json
-import time
 from datetime import datetime, timedelta
-from flask import Flask, request, render_template, send_file, jsonify, abort
+from io import BytesIO
+from typing import Tuple
+
+from flask import Flask, request, render_template, send_file, jsonify
 from flask_wtf.csrf import CSRFProtect
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -13,7 +14,6 @@ from Crypto.Cipher import AES
 from Crypto.Protocol.KDF import PBKDF2
 from Crypto.Random import get_random_bytes
 from werkzeug.utils import secure_filename
-from io import BytesIO
 
 import database
 from config import get_config
@@ -42,11 +42,20 @@ limiter = Limiter(
     swallow_errors=False   # Don't swallow errors, enforce limits strictly
 )
 
-# Constants
+# Crypto Constants
 SALT_LENGTH = 16
 NONCE_LENGTH = 16
 TAG_LENGTH = 16
+HEADER_LENGTH = SALT_LENGTH + NONCE_LENGTH + TAG_LENGTH
 FILE_EXPIRY_DAYS = 7  # Files expire after 7 days
+
+# Precompiled password validation patterns (faster than compiling each call)
+_PASSWORD_PATTERNS = {
+    'uppercase': re.compile(r'[A-Z]'),
+    'lowercase': re.compile(r'[a-z]'),
+    'digit': re.compile(r'\d'),
+    'special': re.compile(r'[!@#$%^&*(),.?":{}|<>]')
+}
 
 # Initialize Database (will skip if no connection string)
 try:
@@ -61,7 +70,7 @@ except Exception as e:
 # ==================== METADATA HELPERS ====================
 
 # NOTE: With PostgreSQL, we use the database as the source of truth.
-# The in-memory caching is less critical for small counts but we can 
+# The in-memory caching is less critical for small counts but we can
 # keep a simple cache if needed. For now, let's rely on fast DB queries.
 
 def create_metadata(original_filename: str) -> dict:
@@ -69,7 +78,7 @@ def create_metadata(original_filename: str) -> dict:
     share_token = uuid.uuid4().hex[:12]  # 12 char share token
     now = datetime.utcnow()
     expires = now + timedelta(days=FILE_EXPIRY_DAYS)
-    
+
     metadata = {
         "original_name": original_filename,
         "uploaded_at": now.isoformat() + "Z",
@@ -100,7 +109,7 @@ def increment_download_count(filename: str) -> int:
         database.update_metadata(filename, {"downloads": new_count})
         return new_count
     return 0
-    
+
 def find_file_by_share_token(token: str) -> tuple[str, dict] | tuple[None, None]:
     """Find a file by its share token via Database."""
     filename, metadata = database.find_by_token(token)
@@ -109,24 +118,24 @@ def find_file_by_share_token(token: str) -> tuple[str, dict] | tuple[None, None]
     return None, None
 
 # ==================== VALIDATION HELPERS ====================
-# (Validations remain unchanged)
-def validate_password(password: str) -> tuple[bool, str]:
-    """Validate password meets security requirements."""
+
+def validate_password(password: str) -> Tuple[bool, str]:
+    """Validate password meets security requirements using precompiled patterns."""
     if len(password) < config.MIN_PASSWORD_LENGTH:
         return False, f"Password must be at least {config.MIN_PASSWORD_LENGTH} characters."
-    
-    if not re.search(r'[A-Z]', password):
+
+    if not _PASSWORD_PATTERNS['uppercase'].search(password):
         return False, "Password must contain at least one uppercase letter."
-        
-    if not re.search(r'[a-z]', password):
+
+    if not _PASSWORD_PATTERNS['lowercase'].search(password):
         return False, "Password must contain at least one lowercase letter."
-        
-    if not re.search(r'\d', password):
+
+    if not _PASSWORD_PATTERNS['digit'].search(password):
         return False, "Password must contain at least one number."
-        
-    if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+
+    if not _PASSWORD_PATTERNS['special'].search(password):
         return False, "Password must contain at least one special character."
-        
+
     return True, ""
 
 def allowed_file(filename: str) -> bool:
@@ -155,14 +164,13 @@ def get_time_remaining(metadata: dict) -> str:
         remaining = expires_at - datetime.utcnow()
         if remaining.total_seconds() <= 0:
             return "Expired"
-        
+
         if remaining.days > 0:
             return f"{remaining.days}d {remaining.seconds // 3600}h"
-        elif remaining.seconds >= 3600:
+        if remaining.seconds >= 3600:
             return f"{remaining.seconds // 3600}h"
-        else:
-            minutes = remaining.seconds // 60
-            return f"{minutes}m"
+        minutes = remaining.seconds // 60
+        return f"{minutes}m"
     except (ValueError, TypeError):
         return "Unknown"
 
@@ -185,13 +193,16 @@ def encrypt_file(file_data: bytes, password: str) -> bytes:
 
 def decrypt_file(file_data: bytes, password: str) -> bytes:
     """Decrypt file data that was encrypted with encrypt_file()."""
+    # Extract components using precomputed offsets
     salt = file_data[:SALT_LENGTH]
-    nonce = file_data[SALT_LENGTH:SALT_LENGTH + NONCE_LENGTH]
-    tag = file_data[SALT_LENGTH + NONCE_LENGTH:SALT_LENGTH + NONCE_LENGTH + TAG_LENGTH]
-    ciphertext = file_data[SALT_LENGTH + NONCE_LENGTH + TAG_LENGTH:]
-    
+    nonce_end = SALT_LENGTH + NONCE_LENGTH
+    tag_end = nonce_end + TAG_LENGTH
+
+    nonce = file_data[SALT_LENGTH:nonce_end]
+    tag = file_data[nonce_end:tag_end]
+    ciphertext = file_data[tag_end:]
+
     key = derive_key(password, salt)
-    
     cipher = AES.new(key, AES.MODE_EAX, nonce)
     return cipher.decrypt_and_verify(ciphertext, tag)
 
@@ -211,50 +222,50 @@ def upload_file():
     """Handle file upload with encryption."""
     if 'file' not in request.files:
         return jsonify({"success": False, "message": "❌ No file provided."}), 400
-    
+
     file = request.files["file"]
     password = request.form.get("password", "")
-    
+
     if not file or file.filename == '':
         return jsonify({"success": False, "message": "❌ No file selected."}), 400
-    
+
     if not allowed_file(file.filename):
         return jsonify({"success": False, "message": "❌ File type not allowed."}), 400
-    
+
     is_valid, error_msg = validate_password(password)
     if not is_valid:
         return jsonify({"success": False, "message": f"❌ {error_msg}"}), 400
-    
+
     try:
         app.logger.info(f"Upload started: {file.filename}")
-        
+
         original_filename = secure_filename(file.filename)
         if not original_filename:
             return jsonify({"success": False, "message": "❌ Invalid filename."}), 400
-        
+
         file_data = file.read()
         app.logger.info(f"File read: {len(file_data)} bytes")
 
         # Check size (redundant to configured limit but good practice)
         if len(file_data) > app.config['MAX_CONTENT_LENGTH']:
-             return jsonify({"success": False, "message": "❌ File too large"}), 413
-        
+            return jsonify({"success": False, "message": "❌ File too large"}), 413
+
         app.logger.info("Starting encryption...")
         encrypted_data = encrypt_file(file_data, password)
         app.logger.info(f"Encryption complete: {len(encrypted_data)} bytes")
-        
+
         # Generate a unique filename for storage in DB (e.g., UUID.enc)
         # This will be the file_id in the database
         enc_filename = f"{uuid.uuid4().hex}.enc"
-        
+
         # Create metadata with share token and expiry
         metadata = create_metadata(original_filename) # Use original name for display
-        
+
         # Save to Database
         app.logger.info(f"Saving to database: {enc_filename}")
         database.save_file(enc_filename, encrypted_data, metadata)
         app.logger.info("Database save complete!")
-        
+
         return jsonify({
             "success": True,
             "message": f"✅ File uploaded! Expires in {FILE_EXPIRY_DAYS} days.",
@@ -273,15 +284,15 @@ def upload_file():
 def share_page(token):
     """Render a share page for a specific file."""
     filename, metadata = find_file_by_share_token(token)
-    
+
     if not filename or not metadata:
         # If not found, it might be expired or never existed.
         return render_template("expired.html", reason=None), 404
-        
+
     # Check if manually deleted
     if metadata.get('deleted_at'):
         return render_template("expired.html", reason='deleted'), 410
-    
+
     if is_file_expired(metadata):
         # Clean up expired file from DB
         try:
@@ -289,11 +300,11 @@ def share_page(token):
         except Exception:
             pass
         return render_template("expired.html", reason='expired'), 410  # Gone
-    
+
     time_remaining = get_time_remaining(metadata)
-    
-    return render_template("share.html", 
-                         filename=metadata["original_name"], 
+
+    return render_template("share.html",
+                         filename=metadata["original_name"],
                          time_remaining=time_remaining,
                          downloads=metadata.get("downloads", 0),
                          token=token)
@@ -305,19 +316,19 @@ def share_page(token):
 def download_file(token):
     """Handle file download with decryption."""
     password = request.json.get("password")
-    
+
     if not password:
         return jsonify({"success": False, "message": "❌ Password required."}), 400
-    
+
     # Find file by token
     filename, metadata = database.find_by_token(token)
-    
+
     if not filename or not metadata:
         return jsonify({"success": False, "message": "❌ File not found or expired."}), 404
-        
+
     if metadata.get('deleted_at'):
         return jsonify({"success": False, "message": "❌ File has been deleted by the owner."}), 410
-    
+
     if is_file_expired(metadata):
         # Trigger cleanup
         try:
@@ -325,19 +336,19 @@ def download_file(token):
         except Exception:
             pass
         return jsonify({"success": False, "message": "❌ This file has expired and been deleted."}), 410
-    
+
     try:
         # Get encrypted data from DB
         encrypted_data, _ = database.get_file(filename)
-        
+
         if not encrypted_data:
             return jsonify({"success": False, "message": "❌ File content missing."}), 404
-        
+
         decrypted_data = decrypt_file(encrypted_data, password)
-        
+
         # Increment download counter
         increment_download_count(filename)
-        
+
         return send_file(
             BytesIO(decrypted_data),
             download_name=metadata["original_name"],
@@ -357,36 +368,32 @@ def list_files():
     try:
         # Trigger expired cleanup
         database.cleanup_expired()
-        
+
         files = []
-        # Get all files from DB
-        db_files = database.list_files() # returns list of (file_id, metadata)
-        
+        # Get all files from DB (now includes _file_size from LENGTH() query)
+        db_files = database.list_files()
+
         for file_id, metadata in db_files:
-            if not metadata: 
+            if not metadata:
                 continue
-            
-            # Get the actual encrypted data size
-            encrypted_data, _ = database.get_file(file_id)
-            file_size = len(encrypted_data) if encrypted_data else 0
-                
+
+            # Use pre-calculated file size from database query (no N+1!)
+            file_size = metadata.pop('_file_size', 0)
+
             file_info = {
-                # Display the original filename to users
                 "name": metadata.get("original_name", "Unknown"),
-                # Store file_id for backend operations (deletion)
                 "file_id": file_id.replace(".enc", ""),
-                "size": file_size,  # Now a number, not a string
+                "size": file_size,
                 "modified": 0,
                 "downloads": metadata.get("downloads", 0),
                 "expires_in": get_time_remaining(metadata),
                 "share_token": metadata.get("share_token")
             }
             files.append(file_info)
-        
-        # Sort by recently uploaded (implies created_at, but we don't have it in metadata easily here except uploaded_at)
-        files.sort(key=lambda x: x['expires_in'], reverse=True) # Sort by expiry or something? 
-        # Actually previous sort was modified time.
-        
+
+        # Sort by expiry time (most remaining time first)
+        files.sort(key=lambda x: x['expires_in'], reverse=True)
+
         return jsonify({"success": True, "files": files})
     except Exception as e:
         app.logger.error(f"List files error: {e}")
@@ -400,31 +407,31 @@ def delete_file(file_id):
     # We stripped .enc in list_files, so we add it back to get the actual DB filename.
     if not file_id.endswith(".enc"):
         file_id += ".enc"
-        
+
     password = ""
     if request.is_json:
         password = request.json.get("password", "")
     else:
         password = request.form.get("password", "")
-        
+
     if not password:
         return jsonify({"success": False, "message": "❌ Password required to delete file."}), 400
 
     # Retrieve from DB
-    encrypted_data, metadata = database.get_file(file_id)
-    
+    encrypted_data, _ = database.get_file(file_id)
+
     if not encrypted_data:
         return jsonify({"success": False, "message": "❌ File not found."}), 404
-    
+
     try:
         # Verify password by attempting to decrypt
         decrypt_file(encrypted_data, password)
-        
+
         # If successful, soft delete (mark as deleted, clear data)
         database.mark_as_deleted(file_id)
-            
+
         return jsonify({"success": True, "message": "✅ File deleted successfully."})
-        
+
     except ValueError:
         return jsonify({"success": False, "message": "❌ Incorrect password. Deletion denied."}), 403
     except Exception as e:
@@ -477,19 +484,19 @@ def add_security_headers(response):
     """Add security headers to every response."""
     # Strict-Transport-Security: Ensure HTTPS (1 year)
     response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
-    
+
     # X-Content-Type-Options: Prevent MIME type sniffing
     response.headers['X-Content-Type-Options'] = 'nosniff'
-    
+
     # X-Frame-Options: Prevent clickjacking (deny all framing)
     response.headers['X-Frame-Options'] = 'DENY'
-    
+
     # X-XSS-Protection: Enable XSS filter (browser default but good to have)
     response.headers['X-XSS-Protection'] = '1; mode=block'
-    
+
     # Referrer-Policy: Control referrer information
     response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
-    
+
     # Content-Security-Policy: Restrict resources to own origin + trusted CDNs
     response.headers['Content-Security-Policy'] = (
         "default-src 'self'; "
@@ -499,7 +506,7 @@ def add_security_headers(response):
         "img-src 'self' data:; "
         "connect-src 'self'"
     )
-    
+
     return response
 
 
