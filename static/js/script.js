@@ -392,6 +392,7 @@ async function loadFiles() {
                     <td><span class="badge ${file.expires_in === 'Expired' ? 'bg-danger' : 'bg-warning text-dark'}">${file.expires_in || 'Unknown'}</span></td>
                     <td>
                         ${file.share_token ? `<button class="btn btn-sm btn-outline-info share-btn me-1" data-token="${escapeHtml(file.share_token)}" title="Copy share link">🔗</button>` : ''}
+                        <button class="btn btn-sm btn-outline-primary email-pkg-btn me-1" data-fileid="${escapeHtml(file.file_id)}" data-displayname="${escapeHtml(file.name)}" title="Download for Email">📧</button>
                         <button class="btn btn-sm btn-outline-danger delete-btn" data-fileid="${escapeHtml(file.file_id)}" data-displayname="${escapeHtml(file.name)}" title="Delete file">🗑️</button>
                     </td>
                 `;
@@ -431,6 +432,13 @@ async function loadFiles() {
                     const displayName = evt.target.dataset.displayname;
                     // Show custom modal (removed browser confirm)
                     await deleteFile(fileId, displayName);
+                });
+
+                // Email Package button
+                row.querySelector('.email-pkg-btn')?.addEventListener('click', async (evt) => {
+                    const fileId = evt.target.dataset.fileid;
+                    const displayName = evt.target.dataset.displayname;
+                    await downloadEmailPackage(fileId, displayName);
                 });
                 
                 fragment.appendChild(row);
@@ -550,6 +558,61 @@ deleteConfirmBtn?.addEventListener('click', async () => {
 async function deleteFile(fileId, displayName = 'this file') {
     // Show custom modal instead of browser prompt
     showDeleteModal(fileId, displayName);
+}
+
+// ================== EMAIL PACKAGE HANDLING ==================
+let currentEmailPackageFileId = null;
+let currentEmailPackageFileName = null;
+
+async function downloadEmailPackage(fileId, displayName) {
+    currentEmailPackageFileId = fileId;
+    currentEmailPackageFileName = displayName;
+    
+    // Reuse delete modal UI but for email package
+    // We'll prompt for password using a simple prompt for now
+    // (could create dedicated modal later)
+    const password = prompt(`📧 Download "${displayName}" for Email\n\nEnter the file password to generate a self-decrypting package:`);
+    
+    if (!password) {
+        return; // User cancelled
+    }
+    
+    showToast('📦 Generating email package...', true);
+    
+    try {
+        const response = await fetch(`/api/download-package/${encodeURIComponent(fileId)}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ password: password })
+        });
+        
+        const contentType = response.headers.get('content-type');
+        
+        if (contentType && contentType.includes('text/html')) {
+            // Success - download the HTML file
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = response.headers.get('content-disposition')?.split('filename=')[1]?.replace(/"/g, '') || `${displayName}_encrypted.html`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showToast('✅ Email package downloaded! Attach it to your email.', true);
+        } else {
+            // Error response
+            const result = await response.json();
+            showToast(result.message || '❌ Could not generate package.', false);
+        }
+    } catch (error) {
+        console.error('Email package error:', error);
+        showToast('❌ Could not generate email package.', false);
+    }
 }
 
 // Refresh button
