@@ -560,27 +560,75 @@ async function deleteFile(fileId, displayName = 'this file') {
     showDeleteModal(fileId, displayName);
 }
 
-// ================== EMAIL PACKAGE HANDLING ==================
+// ================== EMAIL PACKAGE MODAL HANDLING ==================
 let currentEmailPackageFileId = null;
 let currentEmailPackageFileName = null;
 
-async function downloadEmailPackage(fileId, displayName) {
+const emailPkgModal = document.getElementById('email-pkg-modal');
+const emailPkgFilenameEl = document.getElementById('email-pkg-filename');
+const emailPkgPasswordInput = document.getElementById('email-pkg-password');
+const emailPkgCancelBtn = document.getElementById('email-pkg-cancel-btn');
+const emailPkgConfirmBtn = document.getElementById('email-pkg-confirm-btn');
+const emailPkgModalClose = document.querySelector('.email-pkg-close');
+
+// Function to show email package modal
+function showEmailPkgModal(fileId, fileName) {
     currentEmailPackageFileId = fileId;
-    currentEmailPackageFileName = displayName;
+    currentEmailPackageFileName = fileName;
     
-    // Reuse delete modal UI but for email package
-    // We'll prompt for password using a simple prompt for now
-    // (could create dedicated modal later)
-    const password = prompt(`📧 Download "${displayName}" for Email\n\nEnter the file password to generate a self-decrypting package:`);
+    if (emailPkgFilenameEl) emailPkgFilenameEl.textContent = fileName;
+    if (emailPkgPasswordInput) emailPkgPasswordInput.value = '';
+    emailPkgModal?.classList.add('active');
+    
+    // Focus password input
+    setTimeout(() => emailPkgPasswordInput?.focus(), 100);
+    
+    // Prevent body scroll
+    document.body.style.overflow = 'hidden';
+}
+
+// Function to close email package modal
+function closeEmailPkgModal() {
+    emailPkgModal?.classList.remove('active');
+    if (emailPkgPasswordInput) emailPkgPasswordInput.value = '';
+    currentEmailPackageFileId = null;
+    currentEmailPackageFileName = null;
+    
+    // Restore body scroll
+    document.body.style.overflow = '';
+}
+
+// Close modal on backdrop click
+emailPkgModal?.querySelector('.delete-modal-backdrop')?.addEventListener('click', closeEmailPkgModal);
+
+// Close modal on X button
+emailPkgModalClose?.addEventListener('click', closeEmailPkgModal);
+
+// Close modal on Cancel button
+emailPkgCancelBtn?.addEventListener('click', closeEmailPkgModal);
+
+// Close modal on Escape key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && emailPkgModal?.classList.contains('active')) {
+        closeEmailPkgModal();
+    }
+});
+
+// Confirm generation
+emailPkgConfirmBtn?.addEventListener('click', async () => {
+    const password = emailPkgPasswordInput?.value;
     
     if (!password) {
-        return; // User cancelled
+        showToast('❌ Password is required.', false);
+        emailPkgPasswordInput?.focus();
+        return;
     }
     
-    showToast('📦 Generating email package...', true);
+    // Show loading
+    setButtonLoading(emailPkgConfirmBtn, true);
     
     try {
-        const response = await fetch(`/api/download-package/${encodeURIComponent(fileId)}`, {
+        const response = await fetch(`/api/download-package/${encodeURIComponent(currentEmailPackageFileId)}`, {
             method: 'POST',
             headers: {
                 'X-CSRFToken': csrfToken,
@@ -597,22 +645,38 @@ async function downloadEmailPackage(fileId, displayName) {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = response.headers.get('content-disposition')?.split('filename=')[1]?.replace(/"/g, '') || `${displayName}_encrypted.html`;
+            a.download = response.headers.get('content-disposition')?.split('filename=')[1]?.replace(/"/g, '') || `${currentEmailPackageFileName}_encrypted.html`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
             
+            setButtonLoading(emailPkgConfirmBtn, false);
+            closeEmailPkgModal();
             showToast('✅ Email package downloaded! Attach it to your email.', true);
         } else {
             // Error response
             const result = await response.json();
+            setButtonLoading(emailPkgConfirmBtn, false);
             showToast(result.message || '❌ Could not generate package.', false);
         }
     } catch (error) {
         console.error('Email package error:', error);
+        setButtonLoading(emailPkgConfirmBtn, false);
         showToast('❌ Could not generate email package.', false);
     }
+});
+
+// Enter key to submit
+emailPkgPasswordInput?.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        emailPkgConfirmBtn?.click();
+    }
+});
+
+// Main function called from file list
+async function downloadEmailPackage(fileId, displayName) {
+    showEmailPkgModal(fileId, displayName);
 }
 
 // Refresh button
