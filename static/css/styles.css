@@ -619,15 +619,42 @@ footer small {
     max-width: 100%;
   }
   
-  .table thead th,
-  .table tbody td {
-    padding: 0.5rem 0.25rem;
-    font-size: 0.75rem;
+  /* Make table horizontally scrollable on mobile */
+  .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
   
-  .delete-btn, .share-btn {
-    padding: 0.2rem 0.4rem;
+  .table thead th,
+  .table tbody td {
+    padding: 0.5rem 0.35rem;
+    font-size: 0.75rem;
+    white-space: nowrap;
+  }
+  
+  /* Keep action buttons in a single row */
+  .table tbody td:last-child {
+    white-space: nowrap;
+  }
+  
+  .delete-btn, .share-btn, .email-pkg-btn {
+    padding: 0.25rem 0.35rem;
     font-size: 0.7rem;
+    margin-right: 2px !important;
+  }
+  
+  /* File name cell */
+  .file-name {
+    display: inline-flex;
+    align-items: center;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .copy-btn {
+    font-size: 0.65rem !important;
+    padding: 0.15rem 0.25rem !important;
   }
   
   .drop-zone {
@@ -636,6 +663,50 @@ footer small {
   
   .drop-zone-icon {
     font-size: 2rem;
+  }
+  
+  /* Modal responsive */
+  .delete-modal-content {
+    width: 95%;
+    max-width: 100%;
+    margin: 1rem;
+  }
+  
+  .delete-modal-header h5 {
+    font-size: 1.1rem;
+  }
+  
+  .delete-modal-footer {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .delete-modal-footer .btn {
+    width: 100%;
+  }
+}
+
+/* Extra small screens */
+@media (max-width: 400px) {
+  .table thead th,
+  .table tbody td {
+    padding: 0.4rem 0.25rem;
+    font-size: 0.7rem;
+  }
+  
+  /* Hide some columns on very small screens */
+  .table thead th:nth-child(3),
+  .table tbody td:nth-child(3) {
+    display: none; /* Hide Downloads column */
+  }
+  
+  .delete-btn, .share-btn, .email-pkg-btn {
+    padding: 0.2rem 0.3rem;
+    font-size: 0.65rem;
+  }
+  
+  .file-name {
+    max-width: 80px;
   }
 }
 
