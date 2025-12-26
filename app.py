@@ -14,6 +14,7 @@ from flask_limiter.util import get_remote_address
 from Crypto.Cipher import AES
 from Crypto.Protocol.KDF import PBKDF2
 from Crypto.Random import get_random_bytes
+from Crypto.Hash import SHA256
 from werkzeug.utils import secure_filename
 
 import database
@@ -557,8 +558,9 @@ def download_package(file_id):
         decrypted_data = decrypt_file(encrypted_data, password)
 
         # Re-encrypt with AES-GCM for browser Web Crypto API compatibility
+        # IMPORTANT: Use SHA256 for PBKDF2 to match JavaScript's Web Crypto API
         salt = get_random_bytes(16)
-        key = PBKDF2(password, salt, dkLen=32, count=100000)
+        key = PBKDF2(password, salt, dkLen=32, count=100000, hmac_hash_module=SHA256)
         cipher = AES.new(key, AES.MODE_GCM)
         ciphertext, tag = cipher.encrypt_and_digest(decrypted_data)
 

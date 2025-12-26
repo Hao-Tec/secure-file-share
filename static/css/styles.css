@@ -471,6 +471,18 @@ p {
   opacity: 1;
 }
 
+/* Action buttons container - keep buttons together and center when wrapping */
+.table tbody td:last-child {
+  text-align: center;
+}
+
+.table tbody td:last-child .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+}
+
 /* === Stat Box (Share Page) === */
 .stat-box {
   padding: 1rem;
