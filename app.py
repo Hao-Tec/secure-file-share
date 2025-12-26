@@ -297,6 +297,9 @@ def upload_file():
                 "success": True,
                 "message": f"✅ File uploaded! Expires in {FILE_EXPIRY_DAYS} days.",
                 "filename": original_filename,  # Return original name for display
+                "file_id": enc_filename.replace(
+                    ".enc", ""
+                ),  # For email package download
                 "share_token": metadata["share_token"],
                 "share_url": f"{request.host_url}share/{metadata['share_token']}",
             }
@@ -588,6 +591,9 @@ def download_package(file_id):
         # Create downloadable HTML file
         safe_name = secure_filename(original_filename.rsplit(".", 1)[0])
         download_filename = f"{safe_name}_encrypted.html"
+
+        # Increment download counter (email packages count as downloads too)
+        increment_download_count(file_id)
 
         return send_file(
             BytesIO(html_content.encode("utf-8")),

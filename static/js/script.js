@@ -199,6 +199,10 @@ document.getElementById('upload-form')?.addEventListener('submit', async functio
                 // Show success with share link option
                 showToast(result.message, true);
                 
+                // Store upload info for email package download
+                const uploadedFileId = result.file_id;
+                const uploadedPassword = form.querySelector('#password')?.value;
+                
                 // Show share link if available
                 if (result.share_url) {
                     setTimeout(() => {
@@ -211,6 +215,13 @@ document.getElementById('upload-form')?.addEventListener('submit', async functio
                         }).catch(() => {
                            showToast(`📋 Share link: ${result.filename}`, true);
                         });
+                        
+                        // Show option to download email package
+                        if (uploadedFileId && uploadedPassword) {
+                            setTimeout(() => {
+                                showEmailDownloadOption(uploadedFileId, result.filename, uploadedPassword);
+                            }, 2000);
+                        }
                         
                     }, 1500);
                 }
@@ -677,6 +688,78 @@ emailPkgPasswordInput?.addEventListener('keypress', (e) => {
 // Main function called from file list
 async function downloadEmailPackage(fileId, displayName) {
     showEmailPkgModal(fileId, displayName);
+}
+
+// Show email download option after successful upload (auto-downloads with stored password)
+async function showEmailDownloadOption(fileId, filename, password) {
+    // Create a special toast with a download button
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+    
+    const toast = document.createElement('div');
+    toast.className = 'custom-toast success';
+    toast.style.animation = 'slideIn 0.4s ease';
+    toast.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <span>📧 Want to share via email?</span>
+            <button class="btn btn-sm btn-primary email-quick-download" style="padding: 4px 12px; font-size: 0.8rem;">
+                Download Package
+            </button>
+        </div>
+    `;
+    
+    container.appendChild(toast);
+    
+    // Handle click
+    toast.querySelector('.email-quick-download')?.addEventListener('click', async () => {
+        toast.querySelector('.email-quick-download').textContent = '⏳ Generating...';
+        toast.querySelector('.email-quick-download').disabled = true;
+        
+        try {
+            const response = await fetch(`/api/download-package/${encodeURIComponent(fileId)}`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ password: password })
+            });
+            
+            const contentType = response.headers.get('content-type');
+            
+            if (contentType && contentType.includes('text/html')) {
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${filename.split('.')[0]}_encrypted.html`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                toast.innerHTML = '<span>✅ Email package downloaded!</span>';
+                setTimeout(() => toast.remove(), 3000);
+                loadFiles(); // Refresh to show updated download count
+            } else {
+                const result = await response.json();
+                toast.innerHTML = `<span>${result.message || '❌ Failed'}</span>`;
+                setTimeout(() => toast.remove(), 3000);
+            }
+        } catch (error) {
+            console.error('Quick download error:', error);
+            toast.innerHTML = '<span>❌ Download failed</span>';
+            setTimeout(() => toast.remove(), 3000);
+        }
+    });
+    
+    // Auto-remove after 15 seconds if not clicked
+    setTimeout(() => {
+        if (toast.parentNode) {
+            toast.style.animation = 'fadeOut 0.4s ease forwards';
+            setTimeout(() => toast.remove(), 400);
+        }
+    }, 15000);
 }
 
 // Refresh button
