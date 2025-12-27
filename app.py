@@ -256,7 +256,20 @@ def upload_file():
         return jsonify({"success": False, "message": "❌ No file selected."}), 400
 
     if not allowed_file(file.filename):
-        return jsonify({"success": False, "message": "❌ File type not allowed."}), 400
+        ext = (
+            file.filename.rsplit(".", 1)[-1].lower()
+            if "." in file.filename
+            else "unknown"
+        )
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": f"❌ .{ext} files not allowed. Try: pdf, docx, zip, png, py, js, html, etc.",
+                }
+            ),
+            400,
+        )
 
     is_valid, error_msg = validate_password(password)
     if not is_valid:
