@@ -15,11 +15,9 @@ class Config:
         'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'doc', 'docx', 
         'xls', 'xlsx', 'zip', 'rar', '7z', 'mp3', 'mp4', 'mkv'
     }
-    
     # Security settings
     WTF_CSRF_ENABLED = True
     WTF_CSRF_TIME_LIMIT = 3600  # 1 hour CSRF token validity
-    
     # Password requirements
     MIN_PASSWORD_LENGTH = 8
 
@@ -33,7 +31,6 @@ class ProductionConfig(Config):
     """Production configuration."""
     DEBUG = False
     # In production, SECRET_KEY MUST be set via environment variable
-    
 
 def get_config():
     """Return the appropriate configuration based on environment."""

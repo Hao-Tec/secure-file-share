@@ -202,7 +202,6 @@ document.getElementById('upload-form')?.addEventListener('submit', async functio
                 // Store upload info for email package download
                 const uploadedFileId = result.file_id;
                 const uploadedPassword = document.getElementById('password')?.value;
-                console.log('Email package info:', { uploadedFileId, hasPassword: !!uploadedPassword });
                 
                 // Show share link if available
                 if (result.share_url) {
