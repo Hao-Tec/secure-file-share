@@ -336,8 +336,8 @@ def share_page(token):
     filename, metadata = find_file_by_share_token(token)
 
     if not filename or not metadata:
-        # If not found, it might be expired or never existed.
-        return render_template("expired.html", reason=None), 404
+        # Token not found - could be invalid or never existed
+        return render_template("expired.html", reason="notfound"), 404
 
     # Check if manually deleted
     if metadata.get("deleted_at"):

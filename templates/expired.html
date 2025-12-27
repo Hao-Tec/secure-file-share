@@ -21,6 +21,13 @@
                 This file has been manually deleted by its owner.<br>
                 It is no longer available for download.
               </p>
+            {% elif reason == 'notfound' %}
+              <div class="fs-1 mb-3">🔍</div>
+              <h2 class="text-secondary">File Not Found</h2>
+              <p class="text-muted mb-4">
+                This share link doesn't exist or may have been mistyped.<br>
+                Please check the URL and try again.
+              </p>
             {% else %}
               <div class="fs-1 mb-3">⏰</div>
               <h2 class="text-warning">File Expired</h2>
