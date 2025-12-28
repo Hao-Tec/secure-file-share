@@ -276,14 +276,14 @@ def upload_file():
         return jsonify({"success": False, "message": f"❌ {error_msg}"}), 400
 
     try:
-        app.logger.info(f"Upload started: {file.filename}")
+        app.logger.info("Upload started: %s", file.filename)
 
         original_filename = secure_filename(file.filename)
         if not original_filename:
             return jsonify({"success": False, "message": "❌ Invalid filename."}), 400
 
         file_data = file.read()
-        app.logger.info(f"File read: {len(file_data)} bytes")
+        app.logger.info("File read: %d bytes", len(file_data))
 
         # Check size (redundant to configured limit but good practice)
         if len(file_data) > app.config["MAX_CONTENT_LENGTH"]:
@@ -291,7 +291,7 @@ def upload_file():
 
         app.logger.info("Starting encryption...")
         encrypted_data = encrypt_file(file_data, password)
-        app.logger.info(f"Encryption complete: {len(encrypted_data)} bytes")
+        app.logger.info("Encryption complete: %d bytes", len(encrypted_data))
 
         # Generate a unique filename for storage in DB (e.g., UUID.enc)
         # This will be the file_id in the database
@@ -301,7 +301,7 @@ def upload_file():
         metadata = create_metadata(original_filename)  # Use original name for display
 
         # Save to Database
-        app.logger.info(f"Saving to database: {enc_filename}")
+        app.logger.info("Saving to database: %s", enc_filename)
         database.save_file(enc_filename, encrypted_data, metadata)
         app.logger.info("Database save complete!")
 
@@ -319,7 +319,10 @@ def upload_file():
         )
     except Exception as e:
         app.logger.error(
-            f"Upload error at line {e.__traceback__.tb_lineno}: {type(e).__name__}: {e}"
+            "Upload error at line %d: %s: %s",
+            e.__traceback__.tb_lineno,
+            type(e).__name__,
+            e,
         )
         import traceback
 
@@ -439,7 +442,7 @@ def download_file(token):
             403,
         )
     except Exception as e:
-        app.logger.error(f"Download error: {e}")
+        app.logger.error("Download error: %s", e)
         return (
             jsonify(
                 {"success": False, "message": "❌ An error occurred during download."}
@@ -482,7 +485,7 @@ def list_files():
 
         return jsonify({"success": True, "files": files})
     except Exception as e:
-        app.logger.error(f"List files error: {e}")
+        app.logger.error("List files error: %s", e)
         return (
             jsonify({"success": False, "message": "❌ Could not retrieve file list."}),
             500,
@@ -534,7 +537,7 @@ def delete_file(file_id):
             403,
         )
     except Exception as e:
-        app.logger.error(f"Delete error: {e}")
+        app.logger.error("Delete error: %s", e)
         return jsonify({"success": False, "message": "❌ Could not delete file."}), 500
 
 
