@@ -393,32 +393,72 @@
             return bytes;
         }
 
-        // Brute-force protection
-        let failedAttempts = 0;
-        const MAX_ATTEMPTS = 10;
-        let lockoutUntil = 0;
 
-        function getDelayMs() {
-            // Progressive delay: 0, 2s, 4s, 8s, 16s, 30s max
-            if (failedAttempts <= 1) return 0;
-            return Math.min(2000 * Math.pow(2, failedAttempts - 2), 30000);
+        // Brute-force protection with localStorage persistence
+        const STORAGE_KEY = 'cipher_vault_' + btoa(ORIGINAL_FILENAME).slice(0, 20);
+        const MAX_ATTEMPTS = 10;
+        
+        function getStoredState() {
+            try {
+                const stored = localStorage.getItem(STORAGE_KEY);
+                if (stored) {
+                    return JSON.parse(stored);
+                }
+            } catch (e) {}
+            return { failedAttempts: 0, lockoutUntil: 0, permanentLock: false };
         }
+        
+        function saveState(state) {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            } catch (e) {}
+        }
+        
+        function getDelayMs(attempts) {
+            // Progressive delay: 0, 2s, 4s, 8s, 16s, 30s max
+            if (attempts <= 1) return 0;
+            return Math.min(2000 * Math.pow(2, attempts - 2), 30000);
+        }
+        
+        // Check on page load if already locked
+        (function checkInitialLockout() {
+            const state = getStoredState();
+            const btn = document.getElementById('decryptBtn');
+            
+            if (state.permanentLock) {
+                showMessage('🔒 This file is permanently locked due to too many failed attempts.', 'error');
+                btn.disabled = true;
+                return;
+            }
+            
+            const now = Date.now();
+            if (now < state.lockoutUntil) {
+                const remaining = Math.ceil((state.lockoutUntil - now) / 1000);
+                showMessage(`⏳ Please wait ${remaining}s before trying again. ${MAX_ATTEMPTS - state.failedAttempts} attempts left.`, 'error');
+                btn.disabled = true;
+                setTimeout(() => { 
+                    btn.disabled = false; 
+                    clearMessage();
+                }, state.lockoutUntil - now);
+            }
+        })();
 
         async function decryptFile() {
             const password = document.getElementById('password').value;
             const btn = document.getElementById('decryptBtn');
+            const state = getStoredState();
 
-            // Check if locked out
-            if (failedAttempts >= MAX_ATTEMPTS) {
-                showMessage(`🔒 Too many failed attempts. File locked for security.`, 'error');
+            // Check if permanently locked
+            if (state.permanentLock) {
+                showMessage('🔒 This file is permanently locked due to too many failed attempts.', 'error');
                 btn.disabled = true;
                 return;
             }
 
             // Check if in cooldown period
             const now = Date.now();
-            if (now < lockoutUntil) {
-                const remaining = Math.ceil((lockoutUntil - now) / 1000);
+            if (now < state.lockoutUntil) {
+                const remaining = Math.ceil((state.lockoutUntil - now) / 1000);
                 showMessage(`⏳ Please wait ${remaining}s before trying again.`, 'error');
                 return;
             }
@@ -448,8 +488,9 @@
                     encryptedBytes
                 );
 
-                // Success! Reset attempts and download the file
-                failedAttempts = 0;
+                // Success! Clear stored state and download the file
+                localStorage.removeItem(STORAGE_KEY);
+                
                 const blob = new Blob([decryptedData]);
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
@@ -465,22 +506,27 @@
                 document.getElementById('successAnimation').classList.add('show');
 
             } catch (error) {
-                failedAttempts++;
-                const remaining = MAX_ATTEMPTS - failedAttempts;
-                const delay = getDelayMs();
-                lockoutUntil = Date.now() + delay;
+                state.failedAttempts++;
+                const remaining = MAX_ATTEMPTS - state.failedAttempts;
+                const delay = getDelayMs(state.failedAttempts);
+                state.lockoutUntil = Date.now() + delay;
                 
-                if (failedAttempts >= MAX_ATTEMPTS) {
-                    showMessage('🔒 Maximum attempts exceeded. File locked for security.', 'error');
+                if (state.failedAttempts >= MAX_ATTEMPTS) {
+                    state.permanentLock = true;
+                    saveState(state);
+                    showMessage('🔒 Maximum attempts exceeded. File permanently locked.', 'error');
                     btn.disabled = true;
-                } else if (delay > 0) {
-                    showMessage(`❌ Incorrect password. ${remaining} attempts left. Wait ${delay/1000}s.`, 'error');
-                    btn.classList.remove('loading');
-                    setTimeout(() => { btn.disabled = false; }, delay);
                 } else {
-                    showMessage(`❌ Incorrect password. ${remaining} attempts remaining.`, 'error');
-                    btn.classList.remove('loading');
-                    btn.disabled = false;
+                    saveState(state);
+                    if (delay > 0) {
+                        showMessage(`❌ Incorrect password. ${remaining} attempts left. Wait ${delay/1000}s.`, 'error');
+                        btn.classList.remove('loading');
+                        setTimeout(() => { btn.disabled = false; }, delay);
+                    } else {
+                        showMessage(`❌ Incorrect password. ${remaining} attempts remaining.`, 'error');
+                        btn.classList.remove('loading');
+                        btn.disabled = false;
+                    }
                 }
             }
         }
