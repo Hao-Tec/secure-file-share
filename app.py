@@ -68,7 +68,7 @@ try:
         if os.environ.get("DATABASE_URL"):
             database.init_db()
 except Exception as e:
-    print(f"Database Init Warning: {e}")
+    app.logger.warning("Database Init Warning: %s", e)
 
 
 # ==================== METADATA HELPERS ====================
@@ -265,7 +265,7 @@ def upload_file():
             jsonify(
                 {
                     "success": False,
-                    "message": f"❌ .{ext} files not allowed. Try: pdf, docx, zip, png, py, js, html, etc.",
+                    "message": f"❌ .{ext} files not allowed. Try: pdf, docx, zip, png, etc.",
                 }
             ),
             400,
@@ -429,7 +429,7 @@ def download_file(token):
             BytesIO(decrypted_data),
             download_name=metadata["original_name"],
             as_attachment=True,
-            mimetype="application/octet-stream",  # Generic, browser will use original_name's extension
+            mimetype="application/octet-stream",  # Generic binary type
         )
     except ValueError:
         return (
