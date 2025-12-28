@@ -373,13 +373,25 @@ async function loadFiles() {
             // OPTIMIZATION: Use DocumentFragment to batch DOM updates and minimize reflows
             const fragment = document.createDocumentFragment();
 
+
             result.files.forEach(file => {
                 const icon = getFileIcon(file.name);
+                
+                // Truncate long filenames (max 40 chars, preserve extension)
+                const maxLen = 40;
+                let displayName = file.name;
+                if (file.name.length > maxLen) {
+                    const ext = file.name.includes('.') ? file.name.split('.').pop() : '';
+                    const nameWithoutExt = file.name.replace(`.${ext}`, '');
+                    const truncatedName = nameWithoutExt.substring(0, maxLen - ext.length - 4);
+                    displayName = `${truncatedName}...${ext ? '.' + ext : ''}`;
+                }
+                
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>
-                        <span class="file-name" role="button" tabindex="0" title="Click to fill download form">
-                            ${icon} ${escapeHtml(file.name)}
+                        <span class="file-name" role="button" tabindex="0" title="${escapeHtml(file.name)} - Click to fill download form">
+                            ${icon} ${escapeHtml(displayName)}
                         </span>
                         <button class="btn btn-sm btn-link copy-btn p-0 ms-1" title="Copy filename">📋</button>
                     </td>
