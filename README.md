@@ -101,15 +101,16 @@ A beautiful, secure file sharing application with AES-256 encryption. Upload fil
 
 ## 🔒 Security Architecture
 
-| Feature              | Description                                                                       |
-| -------------------- | --------------------------------------------------------------------------------- |
-| **Encryption**       | AES-256 in EAX mode (Authenticated Encryption)                                    |
-| **Key Derivation**   | PBKDF2-HMAC-SHA256 with 100,000 rounds and random salt                            |
-| **Security Headers** | HSTS (Strict Transport Security), CSP (Content Security Policy), NoSniff, NoFrame |
-| **Rate Limiting**    | Per-IP limiting for uploads (2/min, 5/hr) and downloads (5/min, 20/hr)            |
-| **CSRF Protection**  | Flask-WTF CSRF tokens on all forms                                                |
-| **Input Validation** | Secure filename sanitization and path traversal prevention                        |
-| **IDOR Protection**  | Deletion requires "proof of knowledge" (password verification)                    |
+| Feature               | Description                                                                       |
+| --------------------- | --------------------------------------------------------------------------------- |
+| **Encryption**        | AES-256 in EAX mode (Authenticated Encryption)                                    |
+| **Key Derivation**    | PBKDF2-HMAC-SHA256 with 100,000 rounds and random salt                            |
+| **Security Headers**  | HSTS (Strict Transport Security), CSP (Content Security Policy), NoSniff, NoFrame |
+| **Rate Limiting**     | Per-IP limiting for uploads (2/min, 5/hr) and downloads (5/min, 20/hr)            |
+| **CSRF Protection**   | Flask-WTF CSRF tokens on all forms                                                |
+| **Input Validation**  | Secure filename sanitization and path traversal prevention                        |
+| **IDOR Protection**   | Deletion requires "proof of knowledge" (password verification)                    |
+| **Brute-Force Guard** | Offline files: 10 attempts max, progressive delays, then permanent lockout        |
 
 ## ⚡ Performance
 
