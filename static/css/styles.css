@@ -38,7 +38,7 @@
 body {
   margin: 0;
   padding: 0;
-  font-family: 'Inter', sans-serif;
+  font-family: "Inter", sans-serif;
   min-height: 100vh;
   background: linear-gradient(-45deg, #0d1117, #1f2937, #0f172a, #1e3a8a);
   background-size: 400% 400%;
@@ -52,9 +52,80 @@ body {
 }
 
 @keyframes gradientBG {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* === Custom Scrollbar Styling === */
+/* WebKit browsers (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    135deg,
+    rgba(96, 165, 250, 0.6),
+    rgba(59, 130, 246, 0.4)
+  );
+  border-radius: 4px;
+  transition: background 0.3s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    135deg,
+    rgba(96, 165, 250, 0.9),
+    rgba(59, 130, 246, 0.7)
+  );
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(96, 165, 250, 0.5) rgba(255, 255, 255, 0.05);
+}
+
+/* Light theme scrollbar */
+[data-theme="light"] ::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.5),
+    rgba(37, 99, 235, 0.3)
+  );
+}
+
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.8),
+    rgba(37, 99, 235, 0.6)
+  );
+}
+
+[data-theme="light"] * {
+  scrollbar-color: rgba(59, 130, 246, 0.4) rgba(0, 0, 0, 0.05);
 }
 
 /* === Theme Toggle Button === */
@@ -114,8 +185,13 @@ body {
 }
 
 @keyframes bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-20px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
 }
 
 /* === Drag & Drop Zone === */
@@ -238,11 +314,21 @@ p {
 
 /* === Shake Animation === */
 @keyframes shake {
-  0% { transform: translateX(0); }
-  25% { transform: translateX(-6px); }
-  50% { transform: translateX(6px); }
-  75% { transform: translateX(-6px); }
-  100% { transform: translateX(0); }
+  0% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-6px);
+  }
+  50% {
+    transform: translateX(6px);
+  }
+  75% {
+    transform: translateX(-6px);
+  }
+  100% {
+    transform: translateX(0);
+  }
 }
 
 .upload-error-shake {
@@ -401,21 +487,41 @@ p {
   border-radius: 3px;
 }
 
-.strength-bar.very-weak .strength-fill { background-color: #ef4444; }
-.strength-bar.weak .strength-fill { background-color: #f97316; }
-.strength-bar.fair .strength-fill { background-color: #eab308; }
-.strength-bar.good .strength-fill { background-color: #84cc16; }
-.strength-bar.strong .strength-fill { background-color: #22c55e; }
+.strength-bar.very-weak .strength-fill {
+  background-color: #ef4444;
+}
+.strength-bar.weak .strength-fill {
+  background-color: #f97316;
+}
+.strength-bar.fair .strength-fill {
+  background-color: #eab308;
+}
+.strength-bar.good .strength-fill {
+  background-color: #84cc16;
+}
+.strength-bar.strong .strength-fill {
+  background-color: #22c55e;
+}
 
 .strength-text {
   font-size: 0.75rem;
 }
 
-.strength-text.very-weak { color: #ef4444; }
-.strength-text.weak { color: #f97316; }
-.strength-text.fair { color: #eab308; }
-.strength-text.good { color: #84cc16; }
-.strength-text.strong { color: #22c55e; }
+.strength-text.very-weak {
+  color: #ef4444;
+}
+.strength-text.weak {
+  color: #f97316;
+}
+.strength-text.fair {
+  color: #eab308;
+}
+.strength-text.good {
+  color: #84cc16;
+}
+.strength-text.strong {
+  color: #22c55e;
+}
 
 /* === File List Table === */
 .table {
@@ -460,14 +566,16 @@ p {
   text-decoration: underline;
 }
 
-.copy-btn, .share-btn {
+.copy-btn,
+.share-btn {
   padding: 0.25rem 0.5rem;
   font-size: 0.875rem;
   opacity: 0.7;
   transition: opacity 0.2s ease;
 }
 
-.copy-btn:hover, .share-btn:hover {
+.copy-btn:hover,
+.share-btn:hover {
   opacity: 1;
 }
 
@@ -600,19 +708,19 @@ footer small {
     padding: 1rem;
     margin-top: 1rem !important;
   }
-  
+
   h1 {
     font-size: 1.5rem;
   }
-  
+
   .card {
     border-radius: 0.75rem;
   }
-  
+
   .card-body {
     padding: 1rem;
   }
-  
+
   .theme-toggle {
     top: 0.5rem;
     right: 0.5rem;
@@ -620,41 +728,43 @@ footer small {
     height: 40px;
     font-size: 1rem;
   }
-  
+
   #toast-container {
     left: 1rem;
     right: 1rem;
     bottom: 1rem;
   }
-  
+
   .custom-toast {
     max-width: 100%;
   }
-  
+
   /* Make table horizontally scrollable on mobile */
   .table-responsive {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
-  
+
   .table thead th,
   .table tbody td {
     padding: 0.5rem 0.35rem;
     font-size: 0.75rem;
     white-space: nowrap;
   }
-  
+
   /* Keep action buttons in a single row */
   .table tbody td:last-child {
     white-space: nowrap;
   }
-  
-  .delete-btn, .share-btn, .email-pkg-btn {
+
+  .delete-btn,
+  .share-btn,
+  .email-pkg-btn {
     padding: 0.25rem 0.35rem;
     font-size: 0.7rem;
     margin-right: 2px !important;
   }
-  
+
   /* File name cell */
   .file-name {
     display: inline-flex;
@@ -663,36 +773,36 @@ footer small {
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  
+
   .copy-btn {
     font-size: 0.65rem !important;
     padding: 0.15rem 0.25rem !important;
   }
-  
+
   .drop-zone {
     padding: 1.5rem;
   }
-  
+
   .drop-zone-icon {
     font-size: 2rem;
   }
-  
+
   /* Modal responsive */
   .delete-modal-content {
     width: 95%;
     max-width: 100%;
     margin: 1rem;
   }
-  
+
   .delete-modal-header h5 {
     font-size: 1.1rem;
   }
-  
+
   .delete-modal-footer {
     flex-direction: column;
     gap: 0.5rem;
   }
-  
+
   .delete-modal-footer .btn {
     width: 100%;
   }
@@ -705,18 +815,20 @@ footer small {
     padding: 0.4rem 0.25rem;
     font-size: 0.7rem;
   }
-  
+
   /* Hide some columns on very small screens */
   .table thead th:nth-child(3),
   .table tbody td:nth-child(3) {
     display: none; /* Hide Downloads column */
   }
-  
-  .delete-btn, .share-btn, .email-pkg-btn {
+
+  .delete-btn,
+  .share-btn,
+  .email-pkg-btn {
     padding: 0.2rem 0.3rem;
     font-size: 0.65rem;
   }
-  
+
   .file-name {
     max-width: 80px;
   }
