@@ -165,6 +165,7 @@ body {
   display: none;
   align-items: center;
   justify-content: center;
+  -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
 }
 
@@ -275,6 +276,7 @@ p {
 .card {
   border-radius: 1rem;
   background-color: var(--bg-card);
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   color: var(--text-secondary);
   border: 1px solid var(--border-color);
@@ -672,6 +674,7 @@ p {
 
 .custom-toast {
   background-color: var(--bg-card);
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   color: var(--text-primary);
   padding: 1rem 1.5rem;
@@ -943,6 +946,7 @@ footer small {
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.75);
+  -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
   animation: fadeIn 0.3s ease;
 }
@@ -951,6 +955,7 @@ footer small {
   position: relative;
   z-index: 1;
   background: var(--bg-card);
+  -webkit-backdrop-filter: blur(20px);
   backdrop-filter: blur(20px);
   border-radius: 1rem;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
@@ -1062,8 +1067,8 @@ footer small {
   line-height: 1.4;
   color: #fff;
   background: rgba(30, 32, 44, 0.95);
-  backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 10px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(102, 126, 234, 0.2),
