@@ -955,16 +955,24 @@ footer small {
 
 .delete-modal-body {
   padding: 1.5rem;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
 }
 
 .delete-modal-body p {
   margin: 0;
   color: var(--text-secondary);
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .delete-modal-body strong {
   color: var(--accent-primary);
   font-weight: 600;
+  display: inline-block;
+  max-width: 100%;
+  word-break: break-all;
+  overflow-wrap: anywhere;
 }
 
 .delete-modal-footer {
