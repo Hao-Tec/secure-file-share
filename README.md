@@ -111,6 +111,8 @@ A beautiful, secure file sharing application with AES-256 encryption. Upload fil
 | **Input Validation**  | Secure filename sanitization and path traversal prevention                        |
 | **IDOR Protection**   | Deletion requires "proof of knowledge" (password verification)                    |
 | **Brute-Force Guard** | Offline files: 10 attempts max, progressive delays, then permanent lockout        |
+| **Tamper Detection**  | SHA-256 integrity hash detects if offline HTML file was modified                  |
+| **Lockout Persist**   | Brute-force protection survives page reload via localStorage                      |
 
 ## ⚡ Performance
 
