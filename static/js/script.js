@@ -9,6 +9,70 @@ const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribut
 // Store selected file for upload
 let selectedFile = null;
 
+// ================== CUSTOM TOOLTIP SYSTEM ==================
+// Creates a premium, fast tooltip that replaces slow browser defaults
+const tooltipEl = document.createElement('div');
+tooltipEl.className = 'custom-tooltip';
+document.body.appendChild(tooltipEl);
+
+let tooltipTimeout = null;
+
+function showCustomTooltip(element, text) {
+    if (!text) return;
+    
+    clearTimeout(tooltipTimeout);
+    
+    const rect = element.getBoundingClientRect();
+    const tooltipWidth = Math.min(400, text.length * 7 + 28);
+    
+    // Position below element, centered or aligned to left
+    let left = rect.left + (rect.width / 2) - (tooltipWidth / 2);
+    let top = rect.bottom + 8;
+    
+    // Keep tooltip within viewport
+    if (left < 10) left = 10;
+    if (left + tooltipWidth > window.innerWidth - 10) {
+        left = window.innerWidth - tooltipWidth - 10;
+    }
+    
+    // If below viewport, show above
+    const showAbove = top + 80 > window.innerHeight;
+    if (showAbove) {
+        top = rect.top - 50;
+        tooltipEl.classList.add('tooltip-top');
+    } else {
+        tooltipEl.classList.remove('tooltip-top');
+    }
+    
+    tooltipEl.style.left = `${left}px`;
+    tooltipEl.style.top = `${top}px`;
+    tooltipEl.textContent = text;
+    
+    // Instant appearance (no delay like browser default)
+    requestAnimationFrame(() => {
+        tooltipEl.classList.add('visible');
+    });
+}
+
+function hideCustomTooltip() {
+    tooltipEl.classList.remove('visible');
+}
+
+// Event delegation for custom tooltips on elements with data-tooltip
+document.addEventListener('mouseenter', (e) => {
+    const target = e.target.closest('[data-tooltip]');
+    if (target) {
+        showCustomTooltip(target, target.dataset.tooltip);
+    }
+}, true);
+
+document.addEventListener('mouseleave', (e) => {
+    const target = e.target.closest('[data-tooltip]');
+    if (target) {
+        hideCustomTooltip();
+    }
+}, true);
+
 // ================== THEME TOGGLE ==================
 const themeToggle = document.getElementById('theme-toggle');
 const themeIcon = themeToggle?.querySelector('.theme-icon');
@@ -390,7 +454,7 @@ async function loadFiles() {
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>
-                        <span class="file-name" role="button" tabindex="0" title="${escapeHtml(file.name)} - Click to fill download form">
+                        <span class="file-name" role="button" tabindex="0" data-tooltip="${escapeHtml(file.name)}">
                             ${icon} ${escapeHtml(displayName)}
                         </span>
                         <button class="btn btn-sm btn-link copy-btn p-0 ms-1" title="Copy filename">📋</button>

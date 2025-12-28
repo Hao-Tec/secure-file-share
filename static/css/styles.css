@@ -1011,3 +1011,67 @@ footer small {
     transform: translateY(0) scale(1);
   }
 }
+
+/* === Premium Custom Tooltip === */
+.custom-tooltip {
+  position: fixed;
+  z-index: 9999;
+  max-width: 400px;
+  padding: 10px 14px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  line-height: 1.4;
+  color: #fff;
+  background: rgba(30, 32, 44, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(102, 126, 234, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(8px) scale(0.96);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.custom-tooltip.visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.custom-tooltip::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  left: 20px;
+  width: 12px;
+  height: 12px;
+  background: rgba(30, 32, 44, 0.95);
+  border-left: 1px solid rgba(255, 255, 255, 0.15);
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  transform: rotate(45deg);
+}
+
+.custom-tooltip.tooltip-top::before {
+  top: auto;
+  bottom: -6px;
+  transform: rotate(225deg);
+}
+
+/* Light theme tooltip */
+[data-theme="light"] .custom-tooltip {
+  background: rgba(255, 255, 255, 0.95);
+  color: #1e293b;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15),
+    0 0 0 1px rgba(102, 126, 234, 0.15);
+}
+
+[data-theme="light"] .custom-tooltip::before {
+  background: rgba(255, 255, 255, 0.95);
+  border-left: 1px solid rgba(0, 0, 0, 0.1);
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
