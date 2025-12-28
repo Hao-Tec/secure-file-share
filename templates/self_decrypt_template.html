@@ -336,6 +336,44 @@
         const SALT = '{{SALT}}';
         const IV = '{{IV}}';
         const ORIGINAL_FILENAME = '{{FILENAME}}';
+        const INTEGRITY_HASH = '{{INTEGRITY_HASH}}';
+
+        // Tamper detection - verify file integrity on load
+        (async function verifyIntegrity() {
+            try {
+                const dataToHash = ENCRYPTED_DATA + SALT + IV + ORIGINAL_FILENAME;
+                const encoder = new TextEncoder();
+                const data = encoder.encode(dataToHash);
+                const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+                const hashArray = Array.from(new Uint8Array(hashBuffer));
+                const computedHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+                
+                if (INTEGRITY_HASH !== '{{INTEGRITY_HASH}}' && computedHash !== INTEGRITY_HASH) {
+                    // File has been tampered with!
+                    document.body.innerHTML = `
+                        <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#1a1a2e;font-family:system-ui;">
+                            <div style="background:#2d1b1b;border:2px solid #dc2626;border-radius:16px;padding:40px;max-width:500px;text-align:center;">
+                                <div style="font-size:64px;margin-bottom:20px;">⚠️</div>
+                                <h1 style="color:#fca5a5;margin-bottom:16px;">Security Warning</h1>
+                                <p style="color:#fecaca;line-height:1.6;">
+                                    This file has been <strong>modified</strong> since it was created.<br><br>
+                                    It may have been tampered with by an attacker.<br>
+                                    <strong>Do not enter your password.</strong>
+                                </p>
+                                <p style="color:#888;margin-top:20px;font-size:0.8rem;">
+                                    If you received this file via email, contact the sender through a different channel.
+                                </p>
+                            </div>
+                        </div>
+                    `;
+                    throw new Error('Integrity check failed');
+                }
+            } catch (e) {
+                if (e.message !== 'Integrity check failed') {
+                    console.warn('Integrity verification unavailable');
+                }
+            }
+        })();
 
         function togglePassword() {
             const input = document.getElementById('password');

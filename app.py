@@ -599,10 +599,20 @@ def download_package(file_id):
             html_template = f.read()
 
         original_filename = metadata.get("original_name", "decrypted_file")
+
+        # Compute integrity hash for tamper detection
+        import hashlib
+
+        integrity_data = (encrypted_b64 + salt_b64 + iv_b64 + original_filename).encode(
+            "utf-8"
+        )
+        integrity_hash = hashlib.sha256(integrity_data).hexdigest()
+
         html_content = html_template.replace("{{ENCRYPTED_DATA}}", encrypted_b64)
         html_content = html_content.replace("{{SALT}}", salt_b64)
         html_content = html_content.replace("{{IV}}", iv_b64)
         html_content = html_content.replace("{{FILENAME}}", original_filename)
+        html_content = html_content.replace("{{INTEGRITY_HASH}}", integrity_hash)
 
         # Create downloadable HTML file
         safe_name = secure_filename(original_filename.rsplit(".", 1)[0])
