@@ -62,12 +62,27 @@ function hideCustomTooltip() {
 // Track current tooltip target
 let currentTooltipTarget = null;
 
-// Event delegation for custom tooltips on elements with data-tooltip
+// Helper to get tooltip text from element (data-tooltip or title)
+function getTooltipText(element) {
+    if (element.dataset.tooltip) return element.dataset.tooltip;
+    if (element.title) {
+        // Move title to data-tooltip to prevent browser default
+        element.dataset.tooltip = element.title;
+        element.removeAttribute('title');
+        return element.dataset.tooltip;
+    }
+    return null;
+}
+
+// Event delegation for custom tooltips on elements with data-tooltip OR title
 document.addEventListener('mouseenter', (e) => {
-    const target = e.target.closest('[data-tooltip]');
+    const target = e.target.closest('[data-tooltip], [title]');
     if (target) {
-        currentTooltipTarget = target;
-        showCustomTooltip(target, target.dataset.tooltip);
+        const text = getTooltipText(target);
+        if (text) {
+            currentTooltipTarget = target;
+            showCustomTooltip(target, text);
+        }
     }
 }, true);
 
