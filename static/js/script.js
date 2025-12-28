@@ -567,6 +567,49 @@ const emailPkgCancelBtn = document.getElementById('email-pkg-cancel-btn');
 const emailPkgConfirmBtn = document.getElementById('email-pkg-confirm-btn');
 const emailPkgModalClose = document.querySelector('.email-pkg-close');
 
+/**
+ * Helper function to fetch and download email package
+ * Used by modal confirm, quick download toast, and upload success actions
+ * @param {string} fileId - The file ID to download
+ * @param {string} password - The password for decryption
+ * @param {string} downloadFilename - Suggested filename for download
+ * @returns {Promise<{success: boolean, message?: string}>}
+ */
+async function fetchAndDownloadEmailPackage(fileId, password, downloadFilename) {
+    try {
+        const response = await fetch(`/api/download-package/${encodeURIComponent(fileId)}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ password: password })
+        });
+        
+        const contentType = response.headers.get('content-type');
+        
+        if (contentType && contentType.includes('text/html')) {
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = response.headers.get('content-disposition')?.split('filename=')[1]?.replace(/"/g, '') || downloadFilename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            loadFiles(); // Refresh to show updated download count
+            return { success: true };
+        } else {
+            const result = await response.json();
+            return { success: false, message: result.message || '❌ Could not generate package.' };
+        }
+    } catch (error) {
+        console.error('Email package fetch error:', error);
+        return { success: false, message: '❌ Network error. Please try again.' };
+    }
+}
+
 // Function to show email package modal
 function showEmailPkgModal(fileId, fileName) {
     currentEmailPackageFileId = fileId;
@@ -623,43 +666,19 @@ emailPkgConfirmBtn?.addEventListener('click', async () => {
     // Show loading
     setButtonLoading(emailPkgConfirmBtn, true);
     
-    try {
-        const response = await fetch(`/api/download-package/${encodeURIComponent(currentEmailPackageFileId)}`, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': csrfToken,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ password: password })
-        });
-        
-        const contentType = response.headers.get('content-type');
-        
-        if (contentType && contentType.includes('text/html')) {
-            // Success - download the HTML file
-            const blob = await response.blob();
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = response.headers.get('content-disposition')?.split('filename=')[1]?.replace(/"/g, '') || `${currentEmailPackageFileName}_encrypted.html`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            
-            setButtonLoading(emailPkgConfirmBtn, false);
-            closeEmailPkgModal();
-            showToast('✅ Email package downloaded! Attach it to your email.', true);
-        } else {
-            // Error response
-            const result = await response.json();
-            setButtonLoading(emailPkgConfirmBtn, false);
-            showToast(result.message || '❌ Could not generate package.', false);
-        }
-    } catch (error) {
-        console.error('Email package error:', error);
-        setButtonLoading(emailPkgConfirmBtn, false);
-        showToast('❌ Could not generate email package.', false);
+    const result = await fetchAndDownloadEmailPackage(
+        currentEmailPackageFileId, 
+        password, 
+        `${currentEmailPackageFileName}_encrypted.html`
+    );
+    
+    setButtonLoading(emailPkgConfirmBtn, false);
+    
+    if (result.success) {
+        closeEmailPkgModal();
+        showToast('✅ Email package downloaded! Attach it to your email.', true);
+    } else {
+        showToast(result.message, false);
     }
 });
 

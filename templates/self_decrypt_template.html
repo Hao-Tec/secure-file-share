@@ -393,9 +393,35 @@
             return bytes;
         }
 
+        // Brute-force protection
+        let failedAttempts = 0;
+        const MAX_ATTEMPTS = 10;
+        let lockoutUntil = 0;
+
+        function getDelayMs() {
+            // Progressive delay: 0, 2s, 4s, 8s, 16s, 30s max
+            if (failedAttempts <= 1) return 0;
+            return Math.min(2000 * Math.pow(2, failedAttempts - 2), 30000);
+        }
+
         async function decryptFile() {
             const password = document.getElementById('password').value;
             const btn = document.getElementById('decryptBtn');
+
+            // Check if locked out
+            if (failedAttempts >= MAX_ATTEMPTS) {
+                showMessage(`🔒 Too many failed attempts. File locked for security.`, 'error');
+                btn.disabled = true;
+                return;
+            }
+
+            // Check if in cooldown period
+            const now = Date.now();
+            if (now < lockoutUntil) {
+                const remaining = Math.ceil((lockoutUntil - now) / 1000);
+                showMessage(`⏳ Please wait ${remaining}s before trying again.`, 'error');
+                return;
+            }
 
             if (!password) {
                 showMessage('⚠️ Please enter the password', 'error');
@@ -422,7 +448,8 @@
                     encryptedBytes
                 );
 
-                // Success! Download the file
+                // Success! Reset attempts and download the file
+                failedAttempts = 0;
                 const blob = new Blob([decryptedData]);
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
@@ -438,10 +465,23 @@
                 document.getElementById('successAnimation').classList.add('show');
 
             } catch (error) {
-                console.error('Decryption error:', error);
-                showMessage('❌ Incorrect password. Please try again.', 'error');
-                btn.classList.remove('loading');
-                btn.disabled = false;
+                failedAttempts++;
+                const remaining = MAX_ATTEMPTS - failedAttempts;
+                const delay = getDelayMs();
+                lockoutUntil = Date.now() + delay;
+                
+                if (failedAttempts >= MAX_ATTEMPTS) {
+                    showMessage('🔒 Maximum attempts exceeded. File locked for security.', 'error');
+                    btn.disabled = true;
+                } else if (delay > 0) {
+                    showMessage(`❌ Incorrect password. ${remaining} attempts left. Wait ${delay/1000}s.`, 'error');
+                    btn.classList.remove('loading');
+                    setTimeout(() => { btn.disabled = false; }, delay);
+                } else {
+                    showMessage(`❌ Incorrect password. ${remaining} attempts remaining.`, 'error');
+                    btn.classList.remove('loading');
+                    btn.disabled = false;
+                }
             }
         }
 
