@@ -56,12 +56,17 @@ function showCustomTooltip(element, text) {
 
 function hideCustomTooltip() {
     tooltipEl.classList.remove('visible');
+    currentTooltipTarget = null;
 }
+
+// Track current tooltip target
+let currentTooltipTarget = null;
 
 // Event delegation for custom tooltips on elements with data-tooltip
 document.addEventListener('mouseenter', (e) => {
     const target = e.target.closest('[data-tooltip]');
     if (target) {
+        currentTooltipTarget = target;
         showCustomTooltip(target, target.dataset.tooltip);
     }
 }, true);
@@ -72,6 +77,24 @@ document.addEventListener('mouseleave', (e) => {
         hideCustomTooltip();
     }
 }, true);
+
+// Safety listeners - hide tooltip on scroll, blur, or Escape key
+window.addEventListener('scroll', hideCustomTooltip, true);
+window.addEventListener('blur', hideCustomTooltip);
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') hideCustomTooltip();
+});
+
+// Fallback: hide if mouse moves significantly and not over tooltip target
+document.addEventListener('mousemove', (e) => {
+    if (!currentTooltipTarget) return;
+    const rect = currentTooltipTarget.getBoundingClientRect();
+    const buffer = 20;
+    if (e.clientX < rect.left - buffer || e.clientX > rect.right + buffer ||
+        e.clientY < rect.top - buffer || e.clientY > rect.bottom + buffer) {
+        hideCustomTooltip();
+    }
+});
 
 // ================== THEME TOGGLE ==================
 const themeToggle = document.getElementById('theme-toggle');
