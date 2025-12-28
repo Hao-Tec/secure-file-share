@@ -642,6 +642,15 @@ p {
   font-weight: 500;
   animation: slideIn 0.4s ease, fadeOut 0.4s ease 3.6s forwards;
   max-width: 350px;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.custom-toast strong {
+  display: block;
+  max-width: 100%;
+  word-break: break-all;
+  overflow-wrap: anywhere;
 }
 
 .custom-toast.success {

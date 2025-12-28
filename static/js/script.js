@@ -681,13 +681,23 @@ function showUploadSuccessActions(shareUrl, filename, fileId, password) {
     const container = document.getElementById('toast-container');
     if (!container) return;
     
+    // Truncate filename if too long (keep extension visible)
+    const maxLen = 35;
+    let displayName = filename;
+    if (filename.length > maxLen) {
+        const ext = filename.includes('.') ? filename.split('.').pop() : '';
+        const nameWithoutExt = filename.replace(`.${ext}`, '');
+        const truncatedName = nameWithoutExt.substring(0, maxLen - ext.length - 4);
+        displayName = `${truncatedName}...${ext ? '.' + ext : ''}`;
+    }
+    
     const toast = document.createElement('div');
     toast.className = 'custom-toast success';
     toast.style.animation = 'slideIn 0.4s ease';
     toast.style.maxWidth = '400px';
     toast.innerHTML = `
         <div style="margin-bottom: 10px;">
-            <strong>🎉 ${filename}</strong>
+            <strong title="${filename}">🎉 ${displayName}</strong>
         </div>
         <div style="display: flex; flex-wrap: wrap; gap: 8px;">
             <button class="btn btn-sm btn-primary copy-link-btn" style="padding: 6px 14px; font-size: 0.85rem;">
