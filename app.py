@@ -3,6 +3,7 @@
 import os
 import re
 import uuid
+import time
 from datetime import datetime, timedelta
 from io import BytesIO
 from typing import Tuple
@@ -35,6 +36,10 @@ app.config["WTF_CSRF_TIME_LIMIT"] = config.WTF_CSRF_TIME_LIMIT
 
 # Initialize CSRF protection
 csrf = CSRFProtect(app)
+
+# Global variables for optimization
+_LAST_CLEANUP_TIME = 0
+CLEANUP_INTERVAL = 60  # Only run cleanup every 60 seconds
 
 # Initialize rate limiter with strict enforcement
 limiter = Limiter(
@@ -454,9 +459,13 @@ def download_file(token):
 @app.route("/api/files", methods=["GET"])
 def list_files():
     """List all encrypted files with metadata."""
+    global _LAST_CLEANUP_TIME
     try:
-        # Trigger expired cleanup
-        database.cleanup_expired()
+        # Optimization: Throttle cleanup to prevent DB write/delete on every read request
+        current_time = time.time()
+        if current_time - _LAST_CLEANUP_TIME > CLEANUP_INTERVAL:
+            database.cleanup_expired()
+            _LAST_CLEANUP_TIME = current_time
 
         files = []
         # Get all files from DB (now includes _file_size from LENGTH() query)
