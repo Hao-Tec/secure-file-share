@@ -450,6 +450,44 @@ document.getElementById('download-form')?.addEventListener('submit', async funct
     }
 });
 
+// ================== ANIMATION HELPERS ==================
+function animateCopySuccess(btn) {
+    const originalContent = btn.innerHTML;
+    const originalTitle = btn.dataset.tooltip || btn.title;
+
+    // Change to checkmark
+    btn.innerHTML = '✓';
+    btn.classList.add('text-success');
+
+    // Update tooltip if using custom tooltip
+    if (btn.dataset.tooltip) {
+        btn.dataset.tooltip = 'Copied!';
+        // Force update if currently shown
+        const visibleTooltip = document.querySelector('.custom-tooltip.visible');
+        if (visibleTooltip && currentTooltipTarget === btn) {
+            visibleTooltip.textContent = 'Copied!';
+        }
+    } else if (btn.title) {
+        // Fallback for native title
+        btn.title = 'Copied!';
+    }
+
+    setTimeout(() => {
+        btn.innerHTML = originalContent;
+        btn.classList.remove('text-success');
+        if (btn.dataset.tooltip) {
+            btn.dataset.tooltip = originalTitle;
+            // Restore tooltip text if still visible
+             const visibleTooltip = document.querySelector('.custom-tooltip.visible');
+            if (visibleTooltip && currentTooltipTarget === btn) {
+                visibleTooltip.textContent = originalTitle;
+            }
+        } else if (originalTitle) {
+            btn.title = originalTitle;
+        }
+    }, 2000);
+}
+
 // ================== FILE LISTING ==================
 async function loadFiles() {
     const loadingEl = document.getElementById('files-loading');
@@ -495,7 +533,7 @@ async function loadFiles() {
                         <div class="file-cell">
                             <span class="file-icon">${icon}</span>
                             <span class="file-name" role="button" tabindex="0" data-tooltip="${escapeHtml(file.name)}">${escapeHtml(displayName)}</span>
-                            <button class="btn btn-sm btn-link copy-btn p-0" title="Copy filename">📋</button>
+                            <button class="btn btn-sm btn-link copy-btn p-0" title="Copy filename" aria-label="Copy filename">📋</button>
                         </div>
                     </td>
                     <td>${formatFileSize(file.size)}</td>
@@ -503,9 +541,9 @@ async function loadFiles() {
                     <td><span class="badge ${file.expires_in === 'Expired' ? 'bg-danger' : 'bg-warning text-dark'}">${file.expires_in || 'Unknown'}</span></td>
                     <td>
                         <div class="action-btns">
-                            ${file.share_token ? `<button class="btn btn-sm btn-outline-info share-btn" data-token="${escapeHtml(file.share_token)}" title="Copy share link">🔗</button>` : '<span class="action-placeholder"></span>'}
-                            <button class="btn btn-sm btn-outline-primary email-pkg-btn" data-fileid="${escapeHtml(file.file_id)}" data-displayname="${escapeHtml(file.name)}" title="Download for Email">📧</button>
-                            <button class="btn btn-sm btn-outline-danger delete-btn" data-fileid="${escapeHtml(file.file_id)}" data-displayname="${escapeHtml(file.name)}" title="Delete file">🗑️</button>
+                            ${file.share_token ? `<button class="btn btn-sm btn-outline-info share-btn" data-token="${escapeHtml(file.share_token)}" title="Copy share link" aria-label="Copy share link">🔗</button>` : '<span class="action-placeholder"></span>'}
+                            <button class="btn btn-sm btn-outline-primary email-pkg-btn" data-fileid="${escapeHtml(file.file_id)}" data-displayname="${escapeHtml(file.name)}" title="Download for Email" aria-label="Download email package">📧</button>
+                            <button class="btn btn-sm btn-outline-danger delete-btn" data-fileid="${escapeHtml(file.file_id)}" data-displayname="${escapeHtml(file.name)}" title="Delete file" aria-label="Delete file">🗑️</button>
                         </div>
                     </td>
                 `;
@@ -518,9 +556,10 @@ async function loadFiles() {
                 });
                 
                 // Copy filename button
-                row.querySelector('.copy-btn')?.addEventListener('click', async () => {
+                row.querySelector('.copy-btn')?.addEventListener('click', async (e) => {
                     try {
                         await navigator.clipboard.writeText(file.name);
+                        animateCopySuccess(e.currentTarget);
                         showToast('📋 Filename copied to clipboard!', true);
                     } catch {
                         showToast('❌ Could not copy to clipboard.', false);
@@ -533,6 +572,7 @@ async function loadFiles() {
                     const shareUrl = `${window.location.origin}/share/${token}`;
                     try {
                         await navigator.clipboard.writeText(shareUrl);
+                        animateCopySuccess(evt.currentTarget);
                         showToast('🔗 Share link copied to clipboard!', true);
                     } catch {
                         showToast('❌ Could not copy share link.', false);

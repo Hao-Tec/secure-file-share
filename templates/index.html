@@ -74,7 +74,7 @@
                   👁️
                 </button>
               </div>
-              <div id="password-strength" class="password-strength mt-2"></div>
+              <div id="password-strength" class="password-strength mt-2" aria-live="polite"></div>
               <div id="passwordHelp" class="form-text">Min 8 chars, include uppercase, lowercase, and a number</div>
             </div>
             
@@ -138,7 +138,7 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="mb-3">
               <label for="filename" class="form-label">Enter filename to download:</label>
-              <input type="text" class="form-control" id="filename" name="filename" required placeholder="e.g. document_abc123.pdf" />
+              <input type="text" class="form-control" id="filename" name="filename" required placeholder="e.g. document_abc123.pdf" autocorrect="off" autocapitalize="off" spellcheck="false" />
             </div>
             <div class="mb-3">
               <label for="password_dl" class="form-label">Enter decryption password:</label>
