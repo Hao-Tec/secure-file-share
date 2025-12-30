@@ -112,12 +112,22 @@ class ProductionConfig(Config):
     """Production configuration."""
 
     DEBUG = False
-    # In production, SECRET_KEY MUST be set via environment variable
+
+    # Security: Enforce secure cookies in production
+    SESSION_COOKIE_SECURE = True
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = 'Lax'
+
+    # In production, SECRET_KEY MUST be set via environment variable (enforced in get_config)
 
 
 def get_config():
     """Return the appropriate configuration based on environment."""
     env = os.environ.get("FLASK_ENV", "development")
     if env == "production":
+        # Critical Security Check: Ensure SECRET_KEY is set in production
+        if not os.environ.get("SECRET_KEY"):
+            raise ValueError("CRITICAL: SECRET_KEY environment variable must be set in production mode!")
+
         return ProductionConfig()
     return DevelopmentConfig()
