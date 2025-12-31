@@ -451,12 +451,21 @@ def download_file(token):
         )
 
 
+# Global variable to track last cleanup time
+_last_cleanup_time = 0
+CLEANUP_INTERVAL = 60  # seconds
+
 @app.route("/api/files", methods=["GET"])
 def list_files():
     """List all encrypted files with metadata."""
+    global _last_cleanup_time
     try:
-        # Trigger expired cleanup
-        database.cleanup_expired()
+        # Trigger expired cleanup (throttled)
+        import time
+        now = time.time()
+        if now - _last_cleanup_time > CLEANUP_INTERVAL:
+            _last_cleanup_time = now
+            database.cleanup_expired()
 
         files = []
         # Get all files from DB (now includes _file_size from LENGTH() query)
