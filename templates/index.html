@@ -70,7 +70,7 @@
                 <button class="btn btn-outline-secondary" type="button" id="generate-password" aria-label="Generate secure password" title="Generate secure password">
                   🎲
                 </button>
-                <button class="btn btn-outline-secondary toggle-password" type="button" data-target="password" aria-label="Toggle password visibility">
+                <button class="btn btn-outline-secondary toggle-password" type="button" data-target="password" aria-label="Toggle password visibility" title="Toggle password visibility">
                   👁️
                 </button>
               </div>
@@ -138,13 +138,13 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="mb-3">
               <label for="filename" class="form-label">Enter filename to download:</label>
-              <input type="text" class="form-control" id="filename" name="filename" required placeholder="e.g. document_abc123.pdf" />
+              <input type="text" class="form-control" id="filename" name="filename" required placeholder="e.g. document_abc123.pdf" autocorrect="off" autocapitalize="off" spellcheck="false" />
             </div>
             <div class="mb-3">
               <label for="password_dl" class="form-label">Enter decryption password:</label>
               <div class="input-group">
                 <input type="password" class="form-control" id="password_dl" name="password" required />
-                <button class="btn btn-outline-secondary toggle-password" type="button" data-target="password_dl" aria-label="Toggle password visibility">
+                <button class="btn btn-outline-secondary toggle-password" type="button" data-target="password_dl" aria-label="Toggle password visibility" title="Toggle password visibility">
                   👁️
                 </button>
               </div>
@@ -179,7 +179,7 @@
             <label for="delete-password" class="form-label">Enter encryption password to confirm:</label>
             <div class="input-group">
               <input type="password" class="form-control" id="delete-password" placeholder="Your password" required autocomplete="off">
-              <button class="btn btn-outline-secondary toggle-password" type="button" data-target="delete-password" aria-label="Toggle password visibility">
+              <button class="btn btn-outline-secondary toggle-password" type="button" data-target="delete-password" aria-label="Toggle password visibility" title="Toggle password visibility">
                 👁️
               </button>
             </div>
@@ -210,7 +210,7 @@
             <label for="email-pkg-password" class="form-label">Enter encryption password:</label>
             <div class="input-group">
               <input type="password" class="form-control" id="email-pkg-password" placeholder="Your password" required autocomplete="off">
-              <button class="btn btn-outline-secondary toggle-password" type="button" data-target="email-pkg-password" aria-label="Toggle password visibility">
+              <button class="btn btn-outline-secondary toggle-password" type="button" data-target="email-pkg-password" aria-label="Toggle password visibility" title="Toggle password visibility">
                 👁️
               </button>
             </div>
