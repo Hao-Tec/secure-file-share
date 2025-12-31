@@ -98,6 +98,11 @@ class Config:
     # Security settings
     WTF_CSRF_ENABLED = True
     WTF_CSRF_TIME_LIMIT = 3600  # 1 hour CSRF token validity
+
+    # Session Cookie Security
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = 'Lax'
+
     # Password requirements
     MIN_PASSWORD_LENGTH = 8
 
@@ -112,7 +117,26 @@ class ProductionConfig(Config):
     """Production configuration."""
 
     DEBUG = False
+
+    # In production, require secure cookies
+    SESSION_COOKIE_SECURE = True
+
     # In production, SECRET_KEY MUST be set via environment variable
+    def __init__(self):
+        super().__init__()
+        # Check if SECRET_KEY is the default/fallback value or missing
+        # Note: self.SECRET_KEY is inherited from Config class attribute if not overridden
+        # But here we are checking the class attribute or the instance attribute.
+        # Since Config.SECRET_KEY is calculated at module level, we check that.
+
+        # We need to re-check os.environ because Config.SECRET_KEY was set at import time
+        # If the env var was set AFTER import (unlikely in real prod, but possible in tests),
+        # we should respect that.
+
+        env_secret = os.environ.get("SECRET_KEY")
+
+        if not env_secret or env_secret == "dev-fallback-key-change-in-production":
+             raise ValueError("SECRET_KEY environment variable must be set to a secure value in production!")
 
 
 def get_config():
