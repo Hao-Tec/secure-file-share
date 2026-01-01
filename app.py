@@ -71,6 +71,11 @@ except Exception as e:
     app.logger.warning("Database Init Warning: %s", e)
 
 
+# Global variable for cleanup throttling
+_last_cleanup_time = datetime.min
+_cleanup_lock = False
+
+
 # ==================== METADATA HELPERS ====================
 
 # NOTE: With PostgreSQL, we use the database as the source of truth.
@@ -454,9 +459,21 @@ def download_file(token):
 @app.route("/api/files", methods=["GET"])
 def list_files():
     """List all encrypted files with metadata."""
+    global _last_cleanup_time, _cleanup_lock
+
     try:
-        # Trigger expired cleanup
-        database.cleanup_expired()
+        # Trigger expired cleanup (throttled to once per minute)
+        now = datetime.utcnow()
+        if (now - _last_cleanup_time).total_seconds() > 60:
+            # Simple non-blocking check to avoid race conditions slowing down requests
+            # If another thread is cleaning, we skip
+            if not _cleanup_lock:
+                _cleanup_lock = True
+                try:
+                    database.cleanup_expired()
+                    _last_cleanup_time = now
+                finally:
+                    _cleanup_lock = False
 
         files = []
         # Get all files from DB (now includes _file_size from LENGTH() query)
