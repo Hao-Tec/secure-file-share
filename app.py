@@ -8,6 +8,7 @@ from io import BytesIO
 from typing import Tuple
 
 from flask import Flask, request, render_template, send_file, jsonify
+from markupsafe import escape
 from flask_wtf.csrf import CSRFProtect
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -476,7 +477,8 @@ def list_files():
                 "modified": 0,
                 "downloads": metadata.get("downloads", 0),
                 "expires_in": get_time_remaining(metadata),
-                "share_token": metadata.get("share_token"),
+                # SECURITY: Do not expose share_token in public list
+                # "share_token": metadata.get("share_token"),
             }
             files.append(file_info)
 
@@ -611,7 +613,8 @@ def download_package(file_id):
         html_content = html_template.replace("{{ENCRYPTED_DATA}}", encrypted_b64)
         html_content = html_content.replace("{{SALT}}", salt_b64)
         html_content = html_content.replace("{{IV}}", iv_b64)
-        html_content = html_content.replace("{{FILENAME}}", original_filename)
+        # Security: Escape filename to prevent XSS in the HTML package
+        html_content = html_content.replace("{{FILENAME}}", escape(original_filename))
         html_content = html_content.replace("{{INTEGRITY_HASH}}", integrity_hash)
 
         # Create downloadable HTML file
