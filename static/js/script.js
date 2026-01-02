@@ -76,6 +76,7 @@ function getTooltipText(element) {
 
 // Event delegation for custom tooltips on elements with data-tooltip OR title
 document.addEventListener('mouseenter', (e) => {
+    if (!e.target.closest) return;
     const target = e.target.closest('[data-tooltip], [title]');
     if (target) {
         const text = getTooltipText(target);
@@ -87,6 +88,7 @@ document.addEventListener('mouseenter', (e) => {
 }, true);
 
 document.addEventListener('mouseleave', (e) => {
+    if (!e.target.closest) return;
     const target = e.target.closest('[data-tooltip]');
     if (target) {
         hideCustomTooltip();
@@ -518,10 +520,11 @@ async function loadFiles() {
                 });
                 
                 // Copy filename button
-                row.querySelector('.copy-btn')?.addEventListener('click', async () => {
+                row.querySelector('.copy-btn')?.addEventListener('click', async (evt) => {
+                    const btn = evt.currentTarget;
                     try {
                         await navigator.clipboard.writeText(file.name);
-                        showToast('📋 Filename copied to clipboard!', true);
+                        animateCopySuccess(btn, '📋 Filename copied!');
                     } catch {
                         showToast('❌ Could not copy to clipboard.', false);
                     }
@@ -529,11 +532,12 @@ async function loadFiles() {
                 
                 // Share link button
                 row.querySelector('.share-btn')?.addEventListener('click', async (evt) => {
+                    const btn = evt.currentTarget;
                     const token = evt.target.dataset.token;
                     const shareUrl = `${window.location.origin}/share/${token}`;
                     try {
                         await navigator.clipboard.writeText(shareUrl);
-                        showToast('🔗 Share link copied to clipboard!', true);
+                        animateCopySuccess(btn, '🔗 Share link copied!');
                     } catch {
                         showToast('❌ Could not copy share link.', false);
                     }
@@ -1081,6 +1085,49 @@ document.querySelectorAll('.toggle-password').forEach(btn => {
 });
 
 // ================== UI UTILITIES ==================
+function animateCopySuccess(btn, successMsg) {
+    if (!btn || btn.dataset.animating === 'true') return;
+
+    // Lock animation
+    btn.dataset.animating = 'true';
+
+    const originalContent = btn.innerHTML;
+    const originalTooltip = btn.dataset.tooltip || btn.title;
+    const originalClass = btn.className;
+
+    // Change to success state
+    btn.innerHTML = '✓';
+    btn.classList.add('text-success');
+    btn.classList.remove('btn-outline-primary', 'btn-outline-info', 'btn-link');
+
+    // Update tooltip if it exists
+    if (originalTooltip) {
+        btn.dataset.tooltip = 'Copied!';
+        // If tooltip is currently showing, update it immediately
+        if (currentTooltipTarget === btn) {
+            showCustomTooltip(btn, 'Copied!');
+        }
+    }
+
+    // Show toast as backup/confirmation
+    if (successMsg) showToast(successMsg, true);
+
+    // Revert after 2 seconds
+    setTimeout(() => {
+        btn.innerHTML = originalContent;
+        btn.className = originalClass;
+        delete btn.dataset.animating; // Release lock
+
+        if (originalTooltip) {
+            btn.dataset.tooltip = originalTooltip;
+             // If tooltip is still showing (mouse hovered), update it back
+            if (currentTooltipTarget === btn) {
+                showCustomTooltip(btn, originalTooltip);
+            }
+        }
+    }, 2000);
+}
+
 function showToast(message, success = true) {
     const container = document.getElementById('toast-container');
     if (!container) return;
