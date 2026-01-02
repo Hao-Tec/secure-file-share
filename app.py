@@ -53,6 +53,10 @@ TAG_LENGTH = 16
 HEADER_LENGTH = SALT_LENGTH + NONCE_LENGTH + TAG_LENGTH
 FILE_EXPIRY_DAYS = 7  # Files expire after 7 days
 
+# Global throttling for database cleanup
+LAST_CLEANUP_TIME = datetime.min
+CLEANUP_INTERVAL_SECONDS = 60
+
 # Precompiled password validation patterns (faster than compiling each call)
 _PASSWORD_PATTERNS = {
     "uppercase": re.compile(r"[A-Z]"),
@@ -454,9 +458,13 @@ def download_file(token):
 @app.route("/api/files", methods=["GET"])
 def list_files():
     """List all encrypted files with metadata."""
+    global LAST_CLEANUP_TIME
     try:
-        # Trigger expired cleanup
-        database.cleanup_expired()
+        # Trigger expired cleanup (throttled)
+        now = datetime.utcnow()
+        if (now - LAST_CLEANUP_TIME).total_seconds() > CLEANUP_INTERVAL_SECONDS:
+            database.cleanup_expired()
+            LAST_CLEANUP_TIME = now
 
         files = []
         # Get all files from DB (now includes _file_size from LENGTH() query)
