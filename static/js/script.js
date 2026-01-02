@@ -401,13 +401,16 @@ document.getElementById('download-form')?.addEventListener('submit', async funct
             
             const file = filesResult.files?.find(f => f.name === filename);
             
-            if (!file || !file.share_token) {
+            // Use file_id if share_token is not available (secure mode)
+            const tokenOrId = file.share_token || file.file_id;
+
+            if (!file || !tokenOrId) {
                 showToast('❌ File not found.', false);
                 setButtonLoading(downloadBtn, false);
                 return;
             }
             
-            response = await fetch(`/api/download/${file.share_token}`, {
+            response = await fetch(`/api/download/${tokenOrId}`, {
                 method: 'POST',
                 headers: { 
                     'X-CSRFToken': csrfToken,

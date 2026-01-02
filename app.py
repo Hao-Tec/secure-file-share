@@ -378,7 +378,27 @@ def download_file(token):
         return jsonify({"success": False, "message": "❌ Password required."}), 400
 
     # Find file by token
+    # Check if token is actually a file_id (UUID-like) or a share token
+    # We try both if ambiguous, but generally file_id is longer (UUID hex) or ends with .enc in DB
+    # Our share_token is 12 chars hex. UUID hex is 32 chars.
+
+    filename = None
+    metadata = None
+
+    # Try as share token first
     filename, metadata = database.find_by_token(token)
+
+    # If not found, try as file_id (from public list)
+    if not filename:
+        # If token looks like UUID (file_id)
+        if len(token) > 12:
+            # Check if it's a valid file_id
+            enc_filename = token if token.endswith(".enc") else f"{token}.enc"
+            # We can use get_metadata to check existence quickly
+            meta = database.get_metadata(enc_filename)
+            if meta:
+                filename = enc_filename
+                metadata = meta
 
     if not filename or not metadata:
         return (
@@ -476,7 +496,7 @@ def list_files():
                 "modified": 0,
                 "downloads": metadata.get("downloads", 0),
                 "expires_in": get_time_remaining(metadata),
-                "share_token": metadata.get("share_token"),
+                # "share_token": metadata.get("share_token"), # REMOVED for security
             }
             files.append(file_info)
 
@@ -608,10 +628,13 @@ def download_package(file_id):
         )
         integrity_hash = hashlib.sha256(integrity_data).hexdigest()
 
+        import markupsafe
+        safe_original_filename = markupsafe.escape(original_filename)
+
         html_content = html_template.replace("{{ENCRYPTED_DATA}}", encrypted_b64)
         html_content = html_content.replace("{{SALT}}", salt_b64)
         html_content = html_content.replace("{{IV}}", iv_b64)
-        html_content = html_content.replace("{{FILENAME}}", original_filename)
+        html_content = html_content.replace("{{FILENAME}}", safe_original_filename)
         html_content = html_content.replace("{{INTEGRITY_HASH}}", integrity_hash)
 
         # Create downloadable HTML file
