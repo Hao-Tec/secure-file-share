@@ -494,8 +494,8 @@ async function loadFiles() {
                     <td>
                         <div class="file-cell">
                             <span class="file-icon">${icon}</span>
-                            <span class="file-name" role="button" tabindex="0" data-tooltip="${escapeHtml(file.name)}">${escapeHtml(displayName)}</span>
-                            <button class="btn btn-sm btn-link copy-btn p-0" title="Copy filename">📋</button>
+                            <span class="file-name" role="button" tabindex="0" data-tooltip="${escapeHtml(file.name)}" aria-label="${escapeHtml(file.name)}">${escapeHtml(displayName)}</span>
+                            <button class="btn btn-sm btn-link copy-btn p-0" title="Copy filename" aria-label="Copy filename">📋</button>
                         </div>
                     </td>
                     <td>${formatFileSize(file.size)}</td>
@@ -503,9 +503,9 @@ async function loadFiles() {
                     <td><span class="badge ${file.expires_in === 'Expired' ? 'bg-danger' : 'bg-warning text-dark'}">${file.expires_in || 'Unknown'}</span></td>
                     <td>
                         <div class="action-btns">
-                            ${file.share_token ? `<button class="btn btn-sm btn-outline-info share-btn" data-token="${escapeHtml(file.share_token)}" title="Copy share link">🔗</button>` : '<span class="action-placeholder"></span>'}
-                            <button class="btn btn-sm btn-outline-primary email-pkg-btn" data-fileid="${escapeHtml(file.file_id)}" data-displayname="${escapeHtml(file.name)}" title="Download for Email">📧</button>
-                            <button class="btn btn-sm btn-outline-danger delete-btn" data-fileid="${escapeHtml(file.file_id)}" data-displayname="${escapeHtml(file.name)}" title="Delete file">🗑️</button>
+                            ${file.share_token ? `<button class="btn btn-sm btn-outline-info share-btn" data-token="${escapeHtml(file.share_token)}" title="Copy share link" aria-label="Copy share link">🔗</button>` : '<span class="action-placeholder"></span>'}
+                            <button class="btn btn-sm btn-outline-primary email-pkg-btn" data-fileid="${escapeHtml(file.file_id)}" data-displayname="${escapeHtml(file.name)}" title="Download for Email" aria-label="Download for Email">📧</button>
+                            <button class="btn btn-sm btn-outline-danger delete-btn" data-fileid="${escapeHtml(file.file_id)}" data-displayname="${escapeHtml(file.name)}" title="Delete file" aria-label="Delete file">🗑️</button>
                         </div>
                     </td>
                 `;
