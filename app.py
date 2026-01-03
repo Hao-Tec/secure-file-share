@@ -16,6 +16,7 @@ from Crypto.Protocol.KDF import PBKDF2
 from Crypto.Random import get_random_bytes
 from Crypto.Hash import SHA256
 from werkzeug.utils import secure_filename
+from markupsafe import escape
 
 import database
 from config import get_config
@@ -476,7 +477,7 @@ def list_files():
                 "modified": 0,
                 "downloads": metadata.get("downloads", 0),
                 "expires_in": get_time_remaining(metadata),
-                "share_token": metadata.get("share_token"),
+                # share_token removed to prevent info disclosure
             }
             files.append(file_info)
 
@@ -600,10 +601,14 @@ def download_package(file_id):
 
         original_filename = metadata.get("original_name", "decrypted_file")
 
+        # Sanitize filename for HTML injection to prevent XSS
+        safe_filename = str(escape(original_filename))
+
         # Compute integrity hash for tamper detection
+        # IMPORTANT: Use safe_filename in hash so client side integrity check matches the rendered safe filename
         import hashlib
 
-        integrity_data = (encrypted_b64 + salt_b64 + iv_b64 + original_filename).encode(
+        integrity_data = (encrypted_b64 + salt_b64 + iv_b64 + safe_filename).encode(
             "utf-8"
         )
         integrity_hash = hashlib.sha256(integrity_data).hexdigest()
@@ -611,7 +616,7 @@ def download_package(file_id):
         html_content = html_template.replace("{{ENCRYPTED_DATA}}", encrypted_b64)
         html_content = html_content.replace("{{SALT}}", salt_b64)
         html_content = html_content.replace("{{IV}}", iv_b64)
-        html_content = html_content.replace("{{FILENAME}}", original_filename)
+        html_content = html_content.replace("{{FILENAME}}", safe_filename)
         html_content = html_content.replace("{{INTEGRITY_HASH}}", integrity_hash)
 
         # Create downloadable HTML file
