@@ -113,6 +113,7 @@ A beautiful, secure file sharing application with AES-256 encryption. Upload fil
 | **Brute-Force Guard** | Offline files: 10 attempts max, progressive delays, then permanent lockout        |
 | **Tamper Detection**  | SHA-256 integrity hash detects if offline HTML file was modified                  |
 | **Lockout Persist**   | Brute-force protection survives page reload via localStorage                      |
+| **XSS Protection**    | Filename sanitization prevents script injection in email packages                 |
 
 ## ⚡ Performance
 
