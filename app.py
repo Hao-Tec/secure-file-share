@@ -481,8 +481,9 @@ def list_files():
             }
             files.append(file_info)
 
-        # Sort by expiry time (most remaining time first)
-        files.sort(key=lambda x: x["expires_in"], reverse=True)
+        # Sorting is now done in the database (ORDER BY expires_at DESC)
+        # This is much faster and handles the sort correctly (lexicographical date sort)
+        # instead of the previous buggy Python sort on "expires_in" strings.
 
         return jsonify({"success": True, "files": files})
     except Exception as e:
