@@ -1,4 +1,4 @@
-"""Configuration settings for the Secure File Share application."""
+"""Configuration settings for Cipher Vault."""
 
 import os
 from dotenv import load_dotenv

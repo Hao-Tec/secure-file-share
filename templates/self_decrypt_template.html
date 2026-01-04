@@ -1,357 +1,399 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🔐 Encrypted File - {{FILENAME}}</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cipher Vault - {{FILENAME}}</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
 
-        body {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
-            background-attachment: fixed;
-            padding: 20px;
-        }
+      body {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+        background: linear-gradient(
+          135deg,
+          #0f0c29 0%,
+          #302b63 50%,
+          #24243e 100%
+        );
+        background-attachment: fixed;
+        padding: 20px;
+      }
 
-        /* Animated background particles */
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-image: 
-                radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
-                radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.2) 0%, transparent 50%),
-                radial-gradient(circle at 40% 40%, rgba(120, 200, 255, 0.2) 0%, transparent 40%);
-            pointer-events: none;
-            z-index: 0;
-        }
+      /* Animated background particles */
+      body::before {
+        content: "";
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: radial-gradient(
+            circle at 20% 80%,
+            rgba(120, 119, 198, 0.3) 0%,
+            transparent 50%
+          ),
+          radial-gradient(
+            circle at 80% 20%,
+            rgba(255, 119, 198, 0.2) 0%,
+            transparent 50%
+          ),
+          radial-gradient(
+            circle at 40% 40%,
+            rgba(120, 200, 255, 0.2) 0%,
+            transparent 40%
+          );
+        pointer-events: none;
+        z-index: 0;
+      }
 
-        .container {
-            position: relative;
-            z-index: 1;
-            width: 100%;
-            max-width: 480px;
-        }
+      .container {
+        position: relative;
+        z-index: 1;
+        width: 100%;
+        max-width: 480px;
+      }
 
+      .card {
+        background: rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 24px;
+        padding: 48px 40px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5),
+          inset 0 1px 1px rgba(255, 255, 255, 0.1);
+      }
+
+      .icon-container {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 24px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 36px;
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+      }
+
+      h1 {
+        color: #fff;
+        font-size: 1.75rem;
+        font-weight: 600;
+        text-align: center;
+        margin-bottom: 8px;
+      }
+
+      .filename {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.95rem;
+        text-align: center;
+        margin-bottom: 32px;
+        word-break: break-all;
+        padding: 12px 16px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .input-group {
+        margin-bottom: 24px;
+      }
+
+      label {
+        display: block;
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 0.875rem;
+        font-weight: 500;
+        margin-bottom: 8px;
+      }
+
+      .password-wrapper {
+        position: relative;
+      }
+
+      input[type="password"],
+      input[type="text"] {
+        width: 100%;
+        padding: 16px 50px 16px 20px;
+        font-size: 1rem;
+        color: #fff;
+        background: rgba(255, 255, 255, 0.08);
+        border: 2px solid rgba(255, 255, 255, 0.15);
+        border-radius: 14px;
+        outline: none;
+        transition: all 0.3s ease;
+      }
+
+      input:focus {
+        border-color: #667eea;
+        background: rgba(255, 255, 255, 0.12);
+        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.2);
+      }
+
+      input::placeholder {
+        color: rgba(255, 255, 255, 0.4);
+      }
+
+      .toggle-password {
+        position: absolute;
+        right: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        color: rgba(255, 255, 255, 0.5);
+        cursor: pointer;
+        font-size: 1.25rem;
+        padding: 4px;
+        transition: color 0.2s;
+      }
+
+      .toggle-password:hover {
+        color: rgba(255, 255, 255, 0.8);
+      }
+
+      .decrypt-btn {
+        width: 100%;
+        padding: 18px 32px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #fff;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        border-radius: 14px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+      }
+
+      .decrypt-btn:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 15px 40px rgba(102, 126, 234, 0.4);
+      }
+
+      .decrypt-btn:active:not(:disabled) {
+        transform: translateY(0);
+      }
+
+      .decrypt-btn:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+      }
+
+      .decrypt-btn .spinner {
+        display: none;
+        width: 20px;
+        height: 20px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-top-color: #fff;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        margin-right: 10px;
+      }
+
+      .decrypt-btn.loading .spinner {
+        display: inline-block;
+      }
+
+      .decrypt-btn.loading .btn-text {
+        opacity: 0.8;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .message {
+        margin-top: 20px;
+        padding: 14px 18px;
+        border-radius: 12px;
+        font-size: 0.9rem;
+        text-align: center;
+        display: none;
+      }
+
+      .message.error {
+        display: block;
+        background: rgba(239, 68, 68, 0.2);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        color: #fca5a5;
+      }
+
+      .message.success {
+        display: block;
+        background: rgba(34, 197, 94, 0.2);
+        border: 1px solid rgba(34, 197, 94, 0.3);
+        color: #86efac;
+      }
+
+      .footer {
+        text-align: center;
+        margin-top: 24px;
+        color: rgba(255, 255, 255, 0.4);
+        font-size: 0.8rem;
+      }
+
+      .footer a {
+        color: rgba(255, 255, 255, 0.6);
+        text-decoration: none;
+      }
+
+      .footer a:hover {
+        color: #667eea;
+      }
+
+      /* Success animation */
+      .success-animation {
+        display: none;
+        text-align: center;
+        padding: 40px 20px;
+      }
+
+      .success-animation.show {
+        display: block;
+      }
+
+      .success-animation .checkmark {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 20px;
+        background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 40px;
+        animation: scaleIn 0.4s ease;
+      }
+
+      @keyframes scaleIn {
+        0% {
+          transform: scale(0);
+        }
+        50% {
+          transform: scale(1.2);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
+
+      .success-animation h2 {
+        color: #fff;
+        font-size: 1.5rem;
+        margin-bottom: 10px;
+      }
+
+      .success-animation p {
+        color: rgba(255, 255, 255, 0.7);
+      }
+
+      .form-container.hidden {
+        display: none;
+      }
+
+      /* Responsive */
+      @media (max-width: 480px) {
         .card {
-            background: rgba(255, 255, 255, 0.08);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 24px;
-            padding: 48px 40px;
-            box-shadow: 
-                0 25px 50px -12px rgba(0, 0, 0, 0.5),
-                inset 0 1px 1px rgba(255, 255, 255, 0.1);
-        }
-
-        .icon-container {
-            width: 80px;
-            height: 80px;
-            margin: 0 auto 24px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 36px;
-            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+          padding: 32px 24px;
         }
 
         h1 {
-            color: #fff;
-            font-size: 1.75rem;
-            font-weight: 600;
-            text-align: center;
-            margin-bottom: 8px;
+          font-size: 1.5rem;
         }
-
-        .filename {
-            color: rgba(255, 255, 255, 0.7);
-            font-size: 0.95rem;
-            text-align: center;
-            margin-bottom: 32px;
-            word-break: break-all;
-            padding: 12px 16px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .input-group {
-            margin-bottom: 24px;
-        }
-
-        label {
-            display: block;
-            color: rgba(255, 255, 255, 0.8);
-            font-size: 0.875rem;
-            font-weight: 500;
-            margin-bottom: 8px;
-        }
-
-        .password-wrapper {
-            position: relative;
-        }
-
-        input[type="password"],
-        input[type="text"] {
-            width: 100%;
-            padding: 16px 50px 16px 20px;
-            font-size: 1rem;
-            color: #fff;
-            background: rgba(255, 255, 255, 0.08);
-            border: 2px solid rgba(255, 255, 255, 0.15);
-            border-radius: 14px;
-            outline: none;
-            transition: all 0.3s ease;
-        }
-
-        input:focus {
-            border-color: #667eea;
-            background: rgba(255, 255, 255, 0.12);
-            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.2);
-        }
-
-        input::placeholder {
-            color: rgba(255, 255, 255, 0.4);
-        }
-
-        .toggle-password {
-            position: absolute;
-            right: 16px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: none;
-            border: none;
-            color: rgba(255, 255, 255, 0.5);
-            cursor: pointer;
-            font-size: 1.25rem;
-            padding: 4px;
-            transition: color 0.2s;
-        }
-
-        .toggle-password:hover {
-            color: rgba(255, 255, 255, 0.8);
-        }
-
-        .decrypt-btn {
-            width: 100%;
-            padding: 18px 32px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: #fff;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border: none;
-            border-radius: 14px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
-        }
-
-        .decrypt-btn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.4);
-        }
-
-        .decrypt-btn:active:not(:disabled) {
-            transform: translateY(0);
-        }
-
-        .decrypt-btn:disabled {
-            opacity: 0.7;
-            cursor: not-allowed;
-        }
-
-        .decrypt-btn .spinner {
-            display: none;
-            width: 20px;
-            height: 20px;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-top-color: #fff;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin-right: 10px;
-        }
-
-        .decrypt-btn.loading .spinner {
-            display: inline-block;
-        }
-
-        .decrypt-btn.loading .btn-text {
-            opacity: 0.8;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .message {
-            margin-top: 20px;
-            padding: 14px 18px;
-            border-radius: 12px;
-            font-size: 0.9rem;
-            text-align: center;
-            display: none;
-        }
-
-        .message.error {
-            display: block;
-            background: rgba(239, 68, 68, 0.2);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-            color: #fca5a5;
-        }
-
-        .message.success {
-            display: block;
-            background: rgba(34, 197, 94, 0.2);
-            border: 1px solid rgba(34, 197, 94, 0.3);
-            color: #86efac;
-        }
-
-        .footer {
-            text-align: center;
-            margin-top: 24px;
-            color: rgba(255, 255, 255, 0.4);
-            font-size: 0.8rem;
-        }
-
-        .footer a {
-            color: rgba(255, 255, 255, 0.6);
-            text-decoration: none;
-        }
-
-        .footer a:hover {
-            color: #667eea;
-        }
-
-        /* Success animation */
-        .success-animation {
-            display: none;
-            text-align: center;
-            padding: 40px 20px;
-        }
-
-        .success-animation.show {
-            display: block;
-        }
-
-        .success-animation .checkmark {
-            width: 80px;
-            height: 80px;
-            margin: 0 auto 20px;
-            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 40px;
-            animation: scaleIn 0.4s ease;
-        }
-
-        @keyframes scaleIn {
-            0% { transform: scale(0); }
-            50% { transform: scale(1.2); }
-            100% { transform: scale(1); }
-        }
-
-        .success-animation h2 {
-            color: #fff;
-            font-size: 1.5rem;
-            margin-bottom: 10px;
-        }
-
-        .success-animation p {
-            color: rgba(255, 255, 255, 0.7);
-        }
-
-        .form-container.hidden {
-            display: none;
-        }
-
-        /* Responsive */
-        @media (max-width: 480px) {
-            .card {
-                padding: 32px 24px;
-            }
-
-            h1 {
-                font-size: 1.5rem;
-            }
-        }
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <div class="card" id="mainCard" style="display:none;">
-            <div class="form-container" id="formContainer">
-                <div class="icon-container">🔒</div>
-                <h1>Encrypted File</h1>
-                <div class="filename">📄 {{FILENAME}}</div>
+      <div class="card" id="mainCard" style="display: none">
+        <div class="form-container" id="formContainer">
+          <div class="icon-container">🔒</div>
+          <h1>Encrypted File</h1>
+          <div class="filename">📄 {{FILENAME}}</div>
 
-                <div class="input-group">
-                    <label for="password">Enter Password to Decrypt</label>
-                    <div class="password-wrapper">
-                        <input type="password" id="password" placeholder="Enter decryption password" autocomplete="off" autofocus>
-                        <button type="button" class="toggle-password" onclick="togglePassword()" aria-label="Toggle password visibility">👁️</button>
-                    </div>
-                </div>
-
-                <button class="decrypt-btn" id="decryptBtn" onclick="decryptFile()">
-                    <span class="spinner"></span>
-                    <span class="btn-text">🔓 Decrypt & Download</span>
-                </button>
-
-                <div class="message" id="message"></div>
+          <div class="input-group">
+            <label for="password">Enter Password to Decrypt</label>
+            <div class="password-wrapper">
+              <input
+                type="password"
+                id="password"
+                placeholder="Enter decryption password"
+                autocomplete="off"
+                autofocus
+              />
+              <button
+                type="button"
+                class="toggle-password"
+                onclick="togglePassword()"
+                aria-label="Toggle password visibility"
+                >👁️</button
+              >
             </div>
+          </div>
 
-            <div class="success-animation" id="successAnimation">
-                <div class="checkmark">✓</div>
-                <h2>Decryption Successful!</h2>
-                <p>Your file is downloading...</p>
-            </div>
+          <button class="decrypt-btn" id="decryptBtn" onclick="decryptFile()">
+            <span class="spinner"></span>
+            <span class="btn-text">🔓 Decrypt & Download</span>
+          </button>
 
-            <div class="footer">
-                Secured with AES-256 Encryption<br>
-                <a href="https://cipher-vault-rke7.onrender.com" target="_blank" rel="noopener noreferrer">Powered by Cipher Vault</a>
-            </div>
+          <div class="message" id="message"></div>
         </div>
+
+        <div class="success-animation" id="successAnimation">
+          <div class="checkmark">✓</div>
+          <h2>Decryption Successful!</h2>
+          <p>Your file is downloading...</p>
+        </div>
+
+        <div class="footer">
+          Secured with AES-256 Encryption<br />
+          <a
+            href="https://cipher-vault-rke7.onrender.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            >Powered by Cipher Vault</a
+          >
+        </div>
+      </div>
     </div>
 
     <script>
-        // Embedded encrypted data (will be replaced by server)
-        const ENCRYPTED_DATA = '{{ENCRYPTED_DATA}}';
-        const SALT = '{{SALT}}';
-        const IV = '{{IV}}';
-        const ORIGINAL_FILENAME = '{{FILENAME}}';
-        const INTEGRITY_HASH = '{{INTEGRITY_HASH}}';
+      // Embedded encrypted data (will be replaced by server)
+      const ENCRYPTED_DATA = "{{ENCRYPTED_DATA}}";
+      const SALT = "{{SALT}}";
+      const IV = "{{IV}}";
+      const ORIGINAL_FILENAME = "{{FILENAME}}";
+      const INTEGRITY_HASH = "{{INTEGRITY_HASH}}";
 
-        // Tamper detection - verify file integrity on load
-        (async function verifyIntegrity() {
-            const card = document.getElementById('mainCard');
-            try {
-                const dataToHash = ENCRYPTED_DATA + SALT + IV + ORIGINAL_FILENAME;
-                const encoder = new TextEncoder();
-                const data = encoder.encode(dataToHash);
-                const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-                const hashArray = Array.from(new Uint8Array(hashBuffer));
-                const computedHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-                
-                if (computedHash !== INTEGRITY_HASH) {
-                    // File has been tampered with!
-                    document.querySelector('.container').innerHTML = `
+      // Tamper detection - verify file integrity on load
+      (async function verifyIntegrity() {
+        const card = document.getElementById("mainCard");
+        try {
+          const dataToHash = ENCRYPTED_DATA + SALT + IV + ORIGINAL_FILENAME;
+          const encoder = new TextEncoder();
+          const data = encoder.encode(dataToHash);
+          const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+          const hashArray = Array.from(new Uint8Array(hashBuffer));
+          const computedHash = hashArray
+            .map((b) => b.toString(16).padStart(2, "0"))
+            .join("");
+
+          if (computedHash !== INTEGRITY_HASH) {
+            // File has been tampered with!
+            document.querySelector(".container").innerHTML = `
                         <div style="background:#2d1b1b;border:2px solid #dc2626;border-radius:16px;padding:40px;max-width:500px;text-align:center;">
                             <div style="font-size:64px;margin-bottom:20px;">⚠️</div>
                             <h1 style="color:#fca5a5;margin-bottom:16px;">Security Warning</h1>
@@ -365,218 +407,246 @@
                             </p>
                         </div>
                     `;
-                    return; // Stop execution - don't show the form
-                }
-                
-                // Integrity check passed - show the form
-                card.style.display = 'block';
-            } catch (e) {
-                // On any error, show the form anyway (graceful fallback)
-                card.style.display = 'block';
-                console.warn('Integrity verification error:', e);
-            }
-        })();
+            return; // Stop execution - don't show the form
+          }
 
-        function togglePassword() {
-            const input = document.getElementById('password');
-            const btn = document.querySelector('.toggle-password');
-            if (input.type === 'password') {
-                input.type = 'text';
-                btn.textContent = '🙈';
-            } else {
-                input.type = 'password';
-                btn.textContent = '👁️';
-            }
+          // Integrity check passed - show the form
+          card.style.display = "block";
+        } catch (e) {
+          // On any error, show the form anyway (graceful fallback)
+          card.style.display = "block";
+          console.warn("Integrity verification error:", e);
+        }
+      })();
+
+      function togglePassword() {
+        const input = document.getElementById("password");
+        const btn = document.querySelector(".toggle-password");
+        if (input.type === "password") {
+          input.type = "text";
+          btn.textContent = "🙈";
+        } else {
+          input.type = "password";
+          btn.textContent = "👁️";
+        }
+      }
+
+      function showMessage(text, type) {
+        const msg = document.getElementById("message");
+        msg.textContent = text;
+        msg.className = "message " + type;
+      }
+
+      function clearMessage() {
+        const msg = document.getElementById("message");
+        msg.className = "message";
+      }
+
+      async function deriveKey(password, salt) {
+        const enc = new TextEncoder();
+        const keyMaterial = await crypto.subtle.importKey(
+          "raw",
+          enc.encode(password),
+          "PBKDF2",
+          false,
+          ["deriveBits", "deriveKey"]
+        );
+
+        return crypto.subtle.deriveKey(
+          {
+            name: "PBKDF2",
+            salt: salt,
+            iterations: 100000,
+            hash: "SHA-256",
+          },
+          keyMaterial,
+          { name: "AES-GCM", length: 256 },
+          false,
+          ["decrypt"]
+        );
+      }
+
+      function base64ToArrayBuffer(base64) {
+        const binaryString = atob(base64);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        return bytes;
+      }
+
+      // Brute-force protection with localStorage persistence
+      const STORAGE_KEY =
+        "cipher_vault_" + btoa(ORIGINAL_FILENAME).slice(0, 20);
+      const MAX_ATTEMPTS = 10;
+
+      function getStoredState() {
+        try {
+          const stored = localStorage.getItem(STORAGE_KEY);
+          if (stored) {
+            return JSON.parse(stored);
+          }
+        } catch (e) {}
+        return { failedAttempts: 0, lockoutUntil: 0, permanentLock: false };
+      }
+
+      function saveState(state) {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        } catch (e) {}
+      }
+
+      function getDelayMs(attempts) {
+        // Progressive delay: 0, 2s, 4s, 8s, 16s, 30s max
+        if (attempts <= 1) return 0;
+        return Math.min(2000 * Math.pow(2, attempts - 2), 30000);
+      }
+
+      // Check on page load if already locked
+      (function checkInitialLockout() {
+        const state = getStoredState();
+        const btn = document.getElementById("decryptBtn");
+
+        if (state.permanentLock) {
+          showMessage(
+            "🔒 This file is permanently locked due to too many failed attempts.",
+            "error"
+          );
+          btn.disabled = true;
+          return;
         }
 
-        function showMessage(text, type) {
-            const msg = document.getElementById('message');
-            msg.textContent = text;
-            msg.className = 'message ' + type;
-        }
-
-        function clearMessage() {
-            const msg = document.getElementById('message');
-            msg.className = 'message';
-        }
-
-        async function deriveKey(password, salt) {
-            const enc = new TextEncoder();
-            const keyMaterial = await crypto.subtle.importKey(
-                'raw',
-                enc.encode(password),
-                'PBKDF2',
-                false,
-                ['deriveBits', 'deriveKey']
-            );
-
-            return crypto.subtle.deriveKey(
-                {
-                    name: 'PBKDF2',
-                    salt: salt,
-                    iterations: 100000,
-                    hash: 'SHA-256'
-                },
-                keyMaterial,
-                { name: 'AES-GCM', length: 256 },
-                false,
-                ['decrypt']
-            );
-        }
-
-        function base64ToArrayBuffer(base64) {
-            const binaryString = atob(base64);
-            const bytes = new Uint8Array(binaryString.length);
-            for (let i = 0; i < binaryString.length; i++) {
-                bytes[i] = binaryString.charCodeAt(i);
-            }
-            return bytes;
-        }
-
-
-        // Brute-force protection with localStorage persistence
-        const STORAGE_KEY = 'cipher_vault_' + btoa(ORIGINAL_FILENAME).slice(0, 20);
-        const MAX_ATTEMPTS = 10;
-        
-        function getStoredState() {
-            try {
-                const stored = localStorage.getItem(STORAGE_KEY);
-                if (stored) {
-                    return JSON.parse(stored);
-                }
-            } catch (e) {}
-            return { failedAttempts: 0, lockoutUntil: 0, permanentLock: false };
-        }
-        
-        function saveState(state) {
-            try {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-            } catch (e) {}
-        }
-        
-        function getDelayMs(attempts) {
-            // Progressive delay: 0, 2s, 4s, 8s, 16s, 30s max
-            if (attempts <= 1) return 0;
-            return Math.min(2000 * Math.pow(2, attempts - 2), 30000);
-        }
-        
-        // Check on page load if already locked
-        (function checkInitialLockout() {
-            const state = getStoredState();
-            const btn = document.getElementById('decryptBtn');
-            
-            if (state.permanentLock) {
-                showMessage('🔒 This file is permanently locked due to too many failed attempts.', 'error');
-                btn.disabled = true;
-                return;
-            }
-            
-            const now = Date.now();
-            if (now < state.lockoutUntil) {
-                const remaining = Math.ceil((state.lockoutUntil - now) / 1000);
-                showMessage(`⏳ Please wait ${remaining}s before trying again. ${MAX_ATTEMPTS - state.failedAttempts} attempts left.`, 'error');
-                btn.disabled = true;
-                setTimeout(() => { 
-                    btn.disabled = false; 
-                    clearMessage();
-                }, state.lockoutUntil - now);
-            }
-        })();
-
-        async function decryptFile() {
-            const password = document.getElementById('password').value;
-            const btn = document.getElementById('decryptBtn');
-            const state = getStoredState();
-
-            // Check if permanently locked
-            if (state.permanentLock) {
-                showMessage('🔒 This file is permanently locked due to too many failed attempts.', 'error');
-                btn.disabled = true;
-                return;
-            }
-
-            // Check if in cooldown period
-            const now = Date.now();
-            if (now < state.lockoutUntil) {
-                const remaining = Math.ceil((state.lockoutUntil - now) / 1000);
-                showMessage(`⏳ Please wait ${remaining}s before trying again.`, 'error');
-                return;
-            }
-
-            if (!password) {
-                showMessage('⚠️ Please enter the password', 'error');
-                return;
-            }
-
+        const now = Date.now();
+        if (now < state.lockoutUntil) {
+          const remaining = Math.ceil((state.lockoutUntil - now) / 1000);
+          showMessage(
+            `⏳ Please wait ${remaining}s before trying again. ${
+              MAX_ATTEMPTS - state.failedAttempts
+            } attempts left.`,
+            "error"
+          );
+          btn.disabled = true;
+          setTimeout(() => {
+            btn.disabled = false;
             clearMessage();
-            btn.classList.add('loading');
-            btn.disabled = true;
+          }, state.lockoutUntil - now);
+        }
+      })();
 
-            try {
-                // Decode base64 data
-                const encryptedBytes = base64ToArrayBuffer(ENCRYPTED_DATA);
-                const saltBytes = base64ToArrayBuffer(SALT);
-                const ivBytes = base64ToArrayBuffer(IV);
+      async function decryptFile() {
+        const password = document.getElementById("password").value;
+        const btn = document.getElementById("decryptBtn");
+        const state = getStoredState();
 
-                // Derive key from password
-                const key = await deriveKey(password, saltBytes);
-
-                // Decrypt
-                const decryptedData = await crypto.subtle.decrypt(
-                    { name: 'AES-GCM', iv: ivBytes },
-                    key,
-                    encryptedBytes
-                );
-
-                // Success! Clear stored state and download the file
-                localStorage.removeItem(STORAGE_KEY);
-                
-                const blob = new Blob([decryptedData]);
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = ORIGINAL_FILENAME;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-
-                // Show success
-                document.getElementById('formContainer').classList.add('hidden');
-                document.getElementById('successAnimation').classList.add('show');
-
-            } catch (error) {
-                state.failedAttempts++;
-                const remaining = MAX_ATTEMPTS - state.failedAttempts;
-                const delay = getDelayMs(state.failedAttempts);
-                state.lockoutUntil = Date.now() + delay;
-                
-                if (state.failedAttempts >= MAX_ATTEMPTS) {
-                    state.permanentLock = true;
-                    saveState(state);
-                    showMessage('🔒 Maximum attempts exceeded. File permanently locked.', 'error');
-                    btn.disabled = true;
-                } else {
-                    saveState(state);
-                    if (delay > 0) {
-                        showMessage(`❌ Incorrect password. ${remaining} attempts left. Wait ${delay/1000}s.`, 'error');
-                        btn.classList.remove('loading');
-                        setTimeout(() => { btn.disabled = false; }, delay);
-                    } else {
-                        showMessage(`❌ Incorrect password. ${remaining} attempts remaining.`, 'error');
-                        btn.classList.remove('loading');
-                        btn.disabled = false;
-                    }
-                }
-            }
+        // Check if permanently locked
+        if (state.permanentLock) {
+          showMessage(
+            "🔒 This file is permanently locked due to too many failed attempts.",
+            "error"
+          );
+          btn.disabled = true;
+          return;
         }
 
-        // Allow Enter key to submit
-        document.getElementById('password').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                decryptFile();
+        // Check if in cooldown period
+        const now = Date.now();
+        if (now < state.lockoutUntil) {
+          const remaining = Math.ceil((state.lockoutUntil - now) / 1000);
+          showMessage(
+            `⏳ Please wait ${remaining}s before trying again.`,
+            "error"
+          );
+          return;
+        }
+
+        if (!password) {
+          showMessage("⚠️ Please enter the password", "error");
+          return;
+        }
+
+        clearMessage();
+        btn.classList.add("loading");
+        btn.disabled = true;
+
+        try {
+          // Decode base64 data
+          const encryptedBytes = base64ToArrayBuffer(ENCRYPTED_DATA);
+          const saltBytes = base64ToArrayBuffer(SALT);
+          const ivBytes = base64ToArrayBuffer(IV);
+
+          // Derive key from password
+          const key = await deriveKey(password, saltBytes);
+
+          // Decrypt
+          const decryptedData = await crypto.subtle.decrypt(
+            { name: "AES-GCM", iv: ivBytes },
+            key,
+            encryptedBytes
+          );
+
+          // Success! Clear stored state and download the file
+          localStorage.removeItem(STORAGE_KEY);
+
+          const blob = new Blob([decryptedData]);
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = ORIGINAL_FILENAME;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+
+          // Show success
+          document.getElementById("formContainer").classList.add("hidden");
+          document.getElementById("successAnimation").classList.add("show");
+        } catch (error) {
+          state.failedAttempts++;
+          const remaining = MAX_ATTEMPTS - state.failedAttempts;
+          const delay = getDelayMs(state.failedAttempts);
+          state.lockoutUntil = Date.now() + delay;
+
+          if (state.failedAttempts >= MAX_ATTEMPTS) {
+            state.permanentLock = true;
+            saveState(state);
+            showMessage(
+              "🔒 Maximum attempts exceeded. File permanently locked.",
+              "error"
+            );
+            btn.disabled = true;
+          } else {
+            saveState(state);
+            if (delay > 0) {
+              showMessage(
+                `❌ Incorrect password. ${remaining} attempts left. Wait ${
+                  delay / 1000
+                }s.`,
+                "error"
+              );
+              btn.classList.remove("loading");
+              setTimeout(() => {
+                btn.disabled = false;
+              }, delay);
+            } else {
+              showMessage(
+                `❌ Incorrect password. ${remaining} attempts remaining.`,
+                "error"
+              );
+              btn.classList.remove("loading");
+              btn.disabled = false;
             }
+          }
+        }
+      }
+
+      // Allow Enter key to submit
+      document
+        .getElementById("password")
+        .addEventListener("keypress", function (e) {
+          if (e.key === "Enter") {
+            decryptFile();
+          }
         });
     </script>
-</body>
+  </body>
 </html>

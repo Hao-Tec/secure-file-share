@@ -1,4 +1,4 @@
-"""Secure File Share - Flask Application with AES Encryption."""
+"""Cipher Vault - Secure File Sharing with AES-256 Encryption."""
 
 import os
 import re

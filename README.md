@@ -1,6 +1,6 @@
-# 🔐 Secure File Share
+# 🔐 Cipher Vault
 
-A beautiful, secure file sharing application with AES-256 encryption. Upload files with password protection and share them safely.
+Secure file sharing with AES-256 encryption. Upload files with password protection and share them safely via links or self-decrypting email packages.
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)
 ![Flask](https://img.shields.io/badge/Flask-3.0+-green.svg)
