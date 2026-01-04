@@ -503,7 +503,6 @@ async function loadFiles() {
                     <td><span class="badge ${file.expires_in === 'Expired' ? 'bg-danger' : 'bg-warning text-dark'}">${file.expires_in || 'Unknown'}</span></td>
                     <td>
                         <div class="action-btns">
-                            ${file.share_token ? `<button class="btn btn-sm btn-outline-info share-btn" data-token="${escapeHtml(file.share_token)}" title="Copy share link">🔗</button>` : '<span class="action-placeholder"></span>'}
                             <button class="btn btn-sm btn-outline-primary email-pkg-btn" data-fileid="${escapeHtml(file.file_id)}" data-displayname="${escapeHtml(file.name)}" title="Download for Email">📧</button>
                             <button class="btn btn-sm btn-outline-danger delete-btn" data-fileid="${escapeHtml(file.file_id)}" data-displayname="${escapeHtml(file.name)}" title="Delete file">🗑️</button>
                         </div>
@@ -524,18 +523,6 @@ async function loadFiles() {
                         showToast('📋 Filename copied to clipboard!', true);
                     } catch {
                         showToast('❌ Could not copy to clipboard.', false);
-                    }
-                });
-                
-                // Share link button
-                row.querySelector('.share-btn')?.addEventListener('click', async (evt) => {
-                    const token = evt.target.dataset.token;
-                    const shareUrl = `${window.location.origin}/share/${token}`;
-                    try {
-                        await navigator.clipboard.writeText(shareUrl);
-                        showToast('🔗 Share link copied to clipboard!', true);
-                    } catch {
-                        showToast('❌ Could not copy share link.', false);
                     }
                 });
                 

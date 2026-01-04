@@ -476,7 +476,8 @@ def list_files():
                 "modified": 0,
                 "downloads": metadata.get("downloads", 0),
                 "expires_in": get_time_remaining(metadata),
-                "share_token": metadata.get("share_token"),
+                # NOTE: share_token intentionally NOT exposed in public API
+                # Share links shown only to file owner in upload response
             }
             files.append(file_info)
 
@@ -608,10 +609,15 @@ def download_package(file_id):
         )
         integrity_hash = hashlib.sha256(integrity_data).hexdigest()
 
+        # Escape filename for safe embedding in JavaScript string
+        # Prevents XSS if filename contains quotes or HTML
+        import html
+        safe_filename = html.escape(original_filename).replace("'", "\\'")
+
         html_content = html_template.replace("{{ENCRYPTED_DATA}}", encrypted_b64)
         html_content = html_content.replace("{{SALT}}", salt_b64)
         html_content = html_content.replace("{{IV}}", iv_b64)
-        html_content = html_content.replace("{{FILENAME}}", original_filename)
+        html_content = html_content.replace("{{FILENAME}}", safe_filename)
         html_content = html_content.replace("{{INTEGRITY_HASH}}", integrity_hash)
 
         # Create downloadable HTML file
