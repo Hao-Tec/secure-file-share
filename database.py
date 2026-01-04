@@ -42,25 +42,29 @@ def get_db_connection():
     return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
 
 
+# Shared schema - can be imported by reset_db.py
+SCHEMA_SQL = """
+    CREATE TABLE IF NOT EXISTS encrypted_files (
+        id SERIAL PRIMARY KEY,
+        file_id VARCHAR(255) UNIQUE NOT NULL,
+        filename VARCHAR(255) NOT NULL,
+        encrypted_data BYTEA NOT NULL,
+        metadata JSONB NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_file_id ON encrypted_files(file_id);
+    CREATE INDEX IF NOT EXISTS idx_share_token ON encrypted_files((metadata->>'share_token'));
+"""
+
+
 def init_db() -> None:
     """Initialize the database schema."""
     if not DATABASE_URL:
         return
 
     with db_cursor() as cur:
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS encrypted_files (
-                id SERIAL PRIMARY KEY,
-                file_id VARCHAR(255) UNIQUE NOT NULL,
-                filename VARCHAR(255) NOT NULL,
-                encrypted_data BYTEA NOT NULL,
-                metadata JSONB NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-
-            CREATE INDEX IF NOT EXISTS idx_file_id ON encrypted_files(file_id);
-            CREATE INDEX IF NOT EXISTS idx_share_token ON encrypted_files((metadata->>'share_token'));
-        """)
+        cur.execute(SCHEMA_SQL)
 
 
 def save_file(filename: str, encrypted_data: bytes, metadata: Dict[str, Any]) -> bool:
