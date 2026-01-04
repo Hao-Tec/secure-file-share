@@ -101,6 +101,11 @@ class Config:
     # Password requirements
     MIN_PASSWORD_LENGTH = 8
 
+    # Session Security (Defaults)
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = "Lax"
+    SESSION_COOKIE_SECURE = False  # False by default for dev/localhost
+
 
 class DevelopmentConfig(Config):
     """Development configuration."""
@@ -112,7 +117,8 @@ class ProductionConfig(Config):
     """Production configuration."""
 
     DEBUG = False
-    # In production, SECRET_KEY MUST be set via environment variable
+    SESSION_COOKIE_SECURE = True
+
 
 
 def get_config():
