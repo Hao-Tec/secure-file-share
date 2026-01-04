@@ -9,6 +9,34 @@ const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribut
 // Store selected file for upload
 let selectedFile = null;
 
+// ================== SHARE TOKEN STORAGE (localStorage) ==================
+// Stores share tokens locally so they persist across page loads
+// This keeps tokens private (not exposed in public API)
+const SHARE_TOKENS_KEY = 'cipherVaultShareTokens';
+
+function saveShareToken(fileId, shareToken) {
+    try {
+        const tokens = JSON.parse(localStorage.getItem(SHARE_TOKENS_KEY) || '{}');
+        tokens[fileId] = shareToken;
+        localStorage.setItem(SHARE_TOKENS_KEY, JSON.stringify(tokens));
+    } catch { /* localStorage not available */ }
+}
+
+function getShareToken(fileId) {
+    try {
+        const tokens = JSON.parse(localStorage.getItem(SHARE_TOKENS_KEY) || '{}');
+        return tokens[fileId] || null;
+    } catch { return null; }
+}
+
+function removeShareToken(fileId) {
+    try {
+        const tokens = JSON.parse(localStorage.getItem(SHARE_TOKENS_KEY) || '{}');
+        delete tokens[fileId];
+        localStorage.setItem(SHARE_TOKENS_KEY, JSON.stringify(tokens));
+    } catch { /* localStorage not available */ }
+}
+
 // ================== CUSTOM TOOLTIP SYSTEM ==================
 // Creates a premium, fast tooltip that replaces slow browser defaults
 const tooltipEl = document.createElement('div');
@@ -307,6 +335,11 @@ document.getElementById('upload-form')?.addEventListener('submit', async functio
                 
                 // Show share link if available
                 if (result.share_url) {
+                    // Save share token to localStorage for this file
+                    // Extract token from URL: /share/{token}
+                    const shareToken = result.share_url.split('/share/').pop();
+                    saveShareToken(uploadedFileId, shareToken);
+                    
                     setTimeout(() => {
                         // Show styled action toast with buttons
                         showUploadSuccessActions(result.share_url, result.filename, uploadedFileId, uploadedPassword);
@@ -503,6 +536,7 @@ async function loadFiles() {
                     <td><span class="badge ${file.expires_in === 'Expired' ? 'bg-danger' : 'bg-warning text-dark'}">${file.expires_in || 'Unknown'}</span></td>
                     <td>
                         <div class="action-btns">
+                            ${getShareToken(file.file_id) ? `<button class="btn btn-sm btn-outline-info share-btn" data-token="${escapeHtml(getShareToken(file.file_id))}" title="Copy share link">🔗</button>` : '<span class="action-placeholder"></span>'}
                             <button class="btn btn-sm btn-outline-primary email-pkg-btn" data-fileid="${escapeHtml(file.file_id)}" data-displayname="${escapeHtml(file.name)}" title="Download for Email">📧</button>
                             <button class="btn btn-sm btn-outline-danger delete-btn" data-fileid="${escapeHtml(file.file_id)}" data-displayname="${escapeHtml(file.name)}" title="Delete file">🗑️</button>
                         </div>
@@ -523,6 +557,18 @@ async function loadFiles() {
                         showToast('📋 Filename copied to clipboard!', true);
                     } catch {
                         showToast('❌ Could not copy to clipboard.', false);
+                    }
+                });
+                
+                // Share link button (uses localStorage cached token)
+                row.querySelector('.share-btn')?.addEventListener('click', async (evt) => {
+                    const token = evt.target.dataset.token;
+                    const shareUrl = `${window.location.origin}/share/${token}`;
+                    try {
+                        await navigator.clipboard.writeText(shareUrl);
+                        showToast('🔗 Share link copied to clipboard!', true);
+                    } catch {
+                        showToast('❌ Could not copy share link.', false);
                     }
                 });
                 
