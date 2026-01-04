@@ -33,6 +33,16 @@ app.config["MAX_CONTENT_LENGTH"] = config.MAX_CONTENT_LENGTH
 app.config["WTF_CSRF_ENABLED"] = config.WTF_CSRF_ENABLED
 app.config["WTF_CSRF_TIME_LIMIT"] = config.WTF_CSRF_TIME_LIMIT
 
+# Apply session security settings
+app.config["SESSION_COOKIE_HTTPONLY"] = config.SESSION_COOKIE_HTTPONLY
+app.config["SESSION_COOKIE_SAMESITE"] = config.SESSION_COOKIE_SAMESITE
+app.config["SESSION_COOKIE_SECURE"] = config.SESSION_COOKIE_SECURE
+
+# Security Check: Enforce SECRET_KEY in production
+if os.environ.get("FLASK_ENV") == "production":
+    if app.config["SECRET_KEY"] == "dev-fallback-key-change-in-production":
+        raise ValueError("CRITICAL: SECRET_KEY environment variable is required in production!")
+
 # Initialize CSRF protection
 csrf = CSRFProtect(app)
 
@@ -494,6 +504,7 @@ def list_files():
 
 
 @app.route("/api/files/<file_id>", methods=["DELETE", "POST"])
+@limiter.limit("10 per hour", error_message="Too many deletion attempts. Please wait.")
 def delete_file(file_id):
     """Delete an encrypted file and its metadata (requires password)."""
     # file_id comes from the UI list "file_id" field.
