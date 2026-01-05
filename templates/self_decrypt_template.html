@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Cipher Vault - {{FILENAME}}</title>
+    <title>Cipher Vault - {{FILENAME_HTML}}</title>
     <style>
       * {
         margin: 0;
@@ -322,7 +322,7 @@
         <div class="form-container" id="formContainer">
           <div class="icon-container">🔒</div>
           <h1>Encrypted File</h1>
-          <div class="filename">📄 {{FILENAME}}</div>
+          <div class="filename">📄 {{FILENAME_HTML}}</div>
 
           <div class="input-group">
             <label for="password">Enter Password to Decrypt</label>
@@ -375,7 +375,7 @@
       const ENCRYPTED_DATA = "{{ENCRYPTED_DATA}}";
       const SALT = "{{SALT}}";
       const IV = "{{IV}}";
-      const ORIGINAL_FILENAME = "{{FILENAME}}";
+      const ORIGINAL_FILENAME = {{FILENAME_JSON}};
       const INTEGRITY_HASH = "{{INTEGRITY_HASH}}";
 
       // Tamper detection - verify file integrity on load
