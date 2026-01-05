@@ -2,6 +2,7 @@
 
 import os
 import re
+import time
 import uuid
 from datetime import datetime, timedelta
 from io import BytesIO
@@ -451,15 +452,24 @@ def download_file(token):
         )
 
 
+# Global variable to throttle cleanup
+_last_cleanup_time = 0
+
 @app.route("/api/files", methods=["GET"])
 def list_files():
     """List all encrypted files with metadata."""
+    global _last_cleanup_time
     try:
-        # Trigger expired cleanup
-        database.cleanup_expired()
+        # Throttle cleanup to run at most once every 60 seconds
+        now = time.time()
+        if now - _last_cleanup_time > 60:
+            # Trigger expired cleanup
+            database.cleanup_expired()
+            _last_cleanup_time = now
 
         files = []
         # Get all files from DB (now includes _file_size from LENGTH() query)
+        # DB already sorts by expires_at DESC, so no Python sorting needed
         db_files = database.list_files()
 
         for file_id, metadata in db_files:
@@ -481,8 +491,7 @@ def list_files():
             }
             files.append(file_info)
 
-        # Sort by expiry time (most remaining time first)
-        files.sort(key=lambda x: x["expires_in"], reverse=True)
+        # files.sort(key=lambda x: x["expires_in"], reverse=True) # REMOVED: Sorted in DB
 
         return jsonify({"success": True, "files": files})
     except Exception as e:
