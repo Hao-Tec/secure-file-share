@@ -551,25 +551,23 @@ async function loadFiles() {
                 });
                 
                 // Copy filename button
-                row.querySelector('.copy-btn')?.addEventListener('click', async () => {
-                    try {
+                row.querySelector('.copy-btn')?.addEventListener('click', async (e) => {
+                    await animateCopyButton(e.currentTarget, async () => {
                         await navigator.clipboard.writeText(file.name);
-                        showToast('📋 Filename copied to clipboard!', true);
-                    } catch {
-                        showToast('❌ Could not copy to clipboard.', false);
-                    }
+                        showToast('📋 Filename copied!', true);
+                    });
                 });
                 
                 // Share link button (uses localStorage cached token)
                 row.querySelector('.share-btn')?.addEventListener('click', async (evt) => {
-                    const token = evt.target.dataset.token;
+                    const btn = evt.currentTarget;
+                    const token = btn.dataset.token;
                     const shareUrl = `${window.location.origin}/share/${token}`;
-                    try {
+
+                    await animateCopyButton(btn, async () => {
                         await navigator.clipboard.writeText(shareUrl);
-                        showToast('🔗 Share link copied to clipboard!', true);
-                    } catch {
-                        showToast('❌ Could not copy share link.', false);
-                    }
+                        showToast('🔗 Share link copied!', true);
+                    });
                 });
                 
                 // Delete button
@@ -1126,6 +1124,45 @@ function showToast(message, success = true) {
     container.appendChild(toast);
     
     setTimeout(() => toast.remove(), 4000);
+}
+
+function animateCopyButton(btn, action) {
+    if (!btn || btn.disabled) return;
+
+    const originalHtml = btn.innerHTML;
+    const originalWidth = btn.offsetWidth;
+
+    // Lock width to prevent layout shift
+    btn.style.width = `${originalWidth}px`;
+    btn.style.textAlign = 'center';
+    btn.disabled = true;
+
+    Promise.resolve(action()).then(() => {
+        btn.innerHTML = '✓';
+        btn.classList.add('text-success');
+        if (btn.classList.contains('btn-outline-info')) {
+             btn.classList.replace('btn-outline-info', 'btn-outline-success');
+        }
+
+        setTimeout(() => {
+            btn.innerHTML = originalHtml;
+            btn.classList.remove('text-success');
+            if (btn.classList.contains('btn-outline-success')) {
+                btn.classList.replace('btn-outline-success', 'btn-outline-info');
+            }
+            btn.style.width = '';
+            btn.style.textAlign = '';
+            btn.disabled = false;
+        }, 2000);
+    }).catch(() => {
+        btn.innerHTML = '❌';
+        setTimeout(() => {
+            btn.innerHTML = originalHtml;
+            btn.style.width = '';
+            btn.style.textAlign = '';
+            btn.disabled = false;
+        }, 2000);
+    });
 }
 
 function setButtonLoading(btn, loading) {
