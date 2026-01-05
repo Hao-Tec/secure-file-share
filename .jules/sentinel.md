@@ -1,0 +1,4 @@
+## 2024-05-23 - Safe JSON Injection in Templates
+**Vulnerability:** Manual escaping of strings for JavaScript injection in Python (e.g., `replace("'", "\\'")`) failed to handle all edge cases and caused integrity hash mismatches when filenames contained special characters (like quotes or backslashes). This also posed a potential XSS risk if the manual escaping was bypassed.
+**Learning:** Client-side integrity checks rely on the *exact* byte sequence. If the server escapes a string differently than how the client reconstructs it, the hash check fails.
+**Prevention:** When injecting variables into a `<script>` tag for use as JavaScript objects/strings, always use `json.dumps()` on the server side to serialize the data safely. This ensures correct JavaScript syntax and consistent string representation for integrity checks.

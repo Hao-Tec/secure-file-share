@@ -609,15 +609,22 @@ def download_package(file_id):
         )
         integrity_hash = hashlib.sha256(integrity_data).hexdigest()
 
-        # Escape filename for safe embedding in JavaScript string
-        # Prevents XSS if filename contains quotes or HTML
+        # Escape filename for safe embedding in HTML and JavaScript
         import html
-        safe_filename = html.escape(original_filename).replace("'", "\\'")
+        import json
+
+        # HTML safe (for display in divs/titles)
+        safe_filename_html = html.escape(original_filename)
+
+        # JS safe (for use in JavaScript variables) - json.dumps adds quotes!
+        # We must also escape '<' to prevent </script> attacks
+        safe_filename_json = json.dumps(original_filename).replace("<", "\\u003c")
 
         html_content = html_template.replace("{{ENCRYPTED_DATA}}", encrypted_b64)
         html_content = html_content.replace("{{SALT}}", salt_b64)
         html_content = html_content.replace("{{IV}}", iv_b64)
-        html_content = html_content.replace("{{FILENAME}}", safe_filename)
+        html_content = html_content.replace("{{FILENAME_HTML}}", safe_filename_html)
+        html_content = html_content.replace("{{FILENAME_JSON}}", safe_filename_json)
         html_content = html_content.replace("{{INTEGRITY_HASH}}", integrity_hash)
 
         # Create downloadable HTML file
