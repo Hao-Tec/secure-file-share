@@ -18,6 +18,7 @@ from Crypto.Hash import SHA256
 from werkzeug.utils import secure_filename
 
 import database
+import time
 from config import get_config
 
 # Initialize Flask app
@@ -45,6 +46,11 @@ limiter = Limiter(
     headers_enabled=True,  # Add rate limit headers to responses
     swallow_errors=False,  # Don't swallow errors, enforce limits strictly
 )
+
+# Global throttle for cleanup operations to prevent DB write thrashing on read
+# We only want to run cleanup occasionally, not on every request
+last_cleanup_time = 0
+CLEANUP_THROTTLE_SECONDS = 60
 
 # Crypto Constants
 SALT_LENGTH = 16
@@ -454,12 +460,19 @@ def download_file(token):
 @app.route("/api/files", methods=["GET"])
 def list_files():
     """List all encrypted files with metadata."""
+    global last_cleanup_time
+
     try:
-        # Trigger expired cleanup
-        database.cleanup_expired()
+        # Trigger expired cleanup (Throttled)
+        # Only run cleanup if enough time has passed since last run
+        current_time = time.time()
+        if current_time - last_cleanup_time > CLEANUP_THROTTLE_SECONDS:
+            database.cleanup_expired()
+            last_cleanup_time = current_time
 
         files = []
         # Get all files from DB (now includes _file_size from LENGTH() query)
+        # Database already sorts by expires_at DESC (using index)
         db_files = database.list_files()
 
         for file_id, metadata in db_files:
@@ -481,8 +494,8 @@ def list_files():
             }
             files.append(file_info)
 
-        # Sort by expiry time (most remaining time first)
-        files.sort(key=lambda x: x["expires_in"], reverse=True)
+        # NOTE: Sorting is now handled by the database (ORDER BY metadata->>'expires_at')
+        # This is faster (uses index) and fixes the bug where "5h" > "2d" in string sort
 
         return jsonify({"success": True, "files": files})
     except Exception as e:

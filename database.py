@@ -55,6 +55,7 @@ SCHEMA_SQL = """
 
     CREATE INDEX IF NOT EXISTS idx_file_id ON encrypted_files(file_id);
     CREATE INDEX IF NOT EXISTS idx_share_token ON encrypted_files((metadata->>'share_token'));
+    CREATE INDEX IF NOT EXISTS idx_expires_at ON encrypted_files((metadata->>'expires_at'));
 """
 
 
@@ -136,10 +137,12 @@ def list_files() -> List[Tuple[str, Dict[str, Any]]]:
     """List all ACTIVE files with their sizes. Excludes soft-deleted files."""
     with db_cursor() as cur:
         # Include LENGTH() to avoid N+1 query for file sizes
+        # Sort by expires_at DESC directly in DB using the JSONB index
         cur.execute("""
             SELECT file_id, metadata, LENGTH(encrypted_data) as file_size
             FROM encrypted_files
             WHERE NOT (metadata ? 'deleted_at')
+            ORDER BY metadata->>'expires_at' DESC
         """)
         results = cur.fetchall()
         # Return file_id, metadata with size embedded
