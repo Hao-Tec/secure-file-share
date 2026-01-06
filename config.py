@@ -98,6 +98,9 @@ class Config:
     # Security settings
     WTF_CSRF_ENABLED = True
     WTF_CSRF_TIME_LIMIT = 3600  # 1 hour CSRF token validity
+    # Session Security
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = 'Lax'
     # Password requirements
     MIN_PASSWORD_LENGTH = 8
 
@@ -112,6 +115,7 @@ class ProductionConfig(Config):
     """Production configuration."""
 
     DEBUG = False
+    SESSION_COOKIE_SECURE = True
     # In production, SECRET_KEY MUST be set via environment variable
 
 

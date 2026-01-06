@@ -32,6 +32,13 @@ app.config["UPLOAD_FOLDER"] = (
 app.config["MAX_CONTENT_LENGTH"] = config.MAX_CONTENT_LENGTH
 app.config["WTF_CSRF_ENABLED"] = config.WTF_CSRF_ENABLED
 app.config["WTF_CSRF_TIME_LIMIT"] = config.WTF_CSRF_TIME_LIMIT
+# Session Security
+if hasattr(config, "SESSION_COOKIE_HTTPONLY"):
+    app.config["SESSION_COOKIE_HTTPONLY"] = config.SESSION_COOKIE_HTTPONLY
+if hasattr(config, "SESSION_COOKIE_SAMESITE"):
+    app.config["SESSION_COOKIE_SAMESITE"] = config.SESSION_COOKIE_SAMESITE
+if hasattr(config, "SESSION_COOKIE_SECURE"):
+    app.config["SESSION_COOKIE_SECURE"] = config.SESSION_COOKIE_SECURE
 
 # Initialize CSRF protection
 csrf = CSRFProtect(app)
