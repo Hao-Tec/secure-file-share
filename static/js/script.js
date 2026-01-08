@@ -537,7 +537,7 @@ async function loadFiles() {
                     <td>
                         <div class="action-btns">
                             ${getShareToken(file.file_id) ? `<button class="btn btn-sm btn-outline-info share-btn" data-token="${escapeHtml(getShareToken(file.file_id))}" title="Copy share link">🔗</button>` : '<span class="action-placeholder"></span>'}
-                            <button class="btn btn-sm btn-outline-primary email-pkg-btn" data-fileid="${escapeHtml(file.file_id)}" data-displayname="${escapeHtml(file.name)}" title="Download for Email">📧</button>
+                            ${getShareToken(file.file_id) ? `<button class="btn btn-sm btn-outline-primary email-pkg-btn" data-token="${escapeHtml(getShareToken(file.file_id))}" data-displayname="${escapeHtml(file.name)}" title="Download for Email">📧</button>` : '<span class="action-placeholder"></span>'}
                             <button class="btn btn-sm btn-outline-danger delete-btn" data-fileid="${escapeHtml(file.file_id)}" data-displayname="${escapeHtml(file.name)}" title="Delete file">🗑️</button>
                         </div>
                     </td>
@@ -582,9 +582,9 @@ async function loadFiles() {
 
                 // Email Package button
                 row.querySelector('.email-pkg-btn')?.addEventListener('click', async (evt) => {
-                    const fileId = evt.target.dataset.fileid;
+                    const token = evt.target.dataset.token;
                     const displayName = evt.target.dataset.displayname;
-                    await downloadEmailPackage(fileId, displayName);
+                    await downloadEmailPackage(token, displayName);
                 });
                 
                 fragment.appendChild(row);
@@ -707,7 +707,7 @@ async function deleteFile(fileId, displayName = 'this file') {
 }
 
 // ================== EMAIL PACKAGE MODAL HANDLING ==================
-let currentEmailPackageFileId = null;
+let currentEmailPackageToken = null;
 let currentEmailPackageFileName = null;
 
 const emailPkgModal = document.getElementById('email-pkg-modal');
@@ -720,14 +720,14 @@ const emailPkgModalClose = document.querySelector('.email-pkg-close');
 /**
  * Helper function to fetch and download email package
  * Used by modal confirm, quick download toast, and upload success actions
- * @param {string} fileId - The file ID to download
+ * @param {string} token - The share token to download
  * @param {string} password - The password for decryption
  * @param {string} downloadFilename - Suggested filename for download
  * @returns {Promise<{success: boolean, message?: string}>}
  */
-async function fetchAndDownloadEmailPackage(fileId, password, downloadFilename) {
+async function fetchAndDownloadEmailPackage(token, password, downloadFilename) {
     try {
-        const response = await fetch(`/api/download-package/${encodeURIComponent(fileId)}`, {
+        const response = await fetch(`/api/download-package/${encodeURIComponent(token)}`, {
             method: 'POST',
             headers: {
                 'X-CSRFToken': csrfToken,
@@ -761,8 +761,8 @@ async function fetchAndDownloadEmailPackage(fileId, password, downloadFilename) 
 }
 
 // Function to show email package modal
-function showEmailPkgModal(fileId, fileName) {
-    currentEmailPackageFileId = fileId;
+function showEmailPkgModal(token, fileName) {
+    currentEmailPackageToken = token;
     currentEmailPackageFileName = fileName;
     
     if (emailPkgFilenameEl) emailPkgFilenameEl.textContent = fileName;
@@ -780,7 +780,7 @@ function showEmailPkgModal(fileId, fileName) {
 function closeEmailPkgModal() {
     emailPkgModal?.classList.remove('active');
     if (emailPkgPasswordInput) emailPkgPasswordInput.value = '';
-    currentEmailPackageFileId = null;
+    currentEmailPackageToken = null;
     currentEmailPackageFileName = null;
     
     // Restore body scroll
@@ -817,7 +817,7 @@ emailPkgConfirmBtn?.addEventListener('click', async () => {
     setButtonLoading(emailPkgConfirmBtn, true);
     
     const result = await fetchAndDownloadEmailPackage(
-        currentEmailPackageFileId, 
+        currentEmailPackageToken,
         password, 
         `${currentEmailPackageFileName}_encrypted.html`
     );
@@ -840,8 +840,8 @@ emailPkgPasswordInput?.addEventListener('keypress', (e) => {
 });
 
 // Main function called from file list
-async function downloadEmailPackage(fileId, displayName) {
-    showEmailPkgModal(fileId, displayName);
+async function downloadEmailPackage(token, displayName) {
+    showEmailPkgModal(token, displayName);
 }
 
 // Show email download option after successful upload (auto-downloads with stored password)
@@ -849,6 +849,8 @@ async function downloadEmailPackage(fileId, displayName) {
 function showUploadSuccessActions(shareUrl, filename, fileId, password) {
     const container = document.getElementById('toast-container');
     if (!container) return;
+
+    const shareToken = shareUrl.split('/share/').pop();
     
     // Truncate filename if too long (keep extension visible)
     const maxLen = 35;
@@ -872,7 +874,7 @@ function showUploadSuccessActions(shareUrl, filename, fileId, password) {
             <button class="btn btn-sm btn-primary copy-link-btn" style="padding: 6px 14px; font-size: 0.85rem;">
                 📋 Copy Share Link
             </button>
-            ${fileId && password ? `
+            ${shareToken && password ? `
             <button class="btn btn-sm btn-outline-primary email-pkg-btn-quick" style="padding: 6px 14px; font-size: 0.85rem;">
                 📧 Email Package
             </button>
@@ -908,7 +910,7 @@ function showUploadSuccessActions(shareUrl, filename, fileId, password) {
         btn.disabled = true;
         
         try {
-            const response = await fetch(`/api/download-package/${encodeURIComponent(fileId)}`, {
+            const response = await fetch(`/api/download-package/${encodeURIComponent(shareToken)}`, {
                 method: 'POST',
                 headers: {
                     'X-CSRFToken': csrfToken,
