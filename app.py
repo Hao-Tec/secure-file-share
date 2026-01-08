@@ -542,15 +542,11 @@ def delete_file(file_id):
         return jsonify({"success": False, "message": "❌ Could not delete file."}), 500
 
 
-@app.route("/api/download-package/<file_id>", methods=["POST"])
+@app.route("/api/download-package/<token>", methods=["POST"])
 @limiter.limit("10 per hour", error_message="Too many package downloads. Please wait.")
-def download_package(file_id):
+def download_package(token):
     """Generate a self-decrypting HTML package for email sharing."""
     import base64
-
-    # Normalize file_id
-    if not file_id.endswith(".enc"):
-        file_id += ".enc"
 
     password = ""
     if request.is_json:
@@ -561,11 +557,17 @@ def download_package(file_id):
     if not password:
         return jsonify({"success": False, "message": "❌ Password required."}), 400
 
-    # Get file from database
-    encrypted_data, metadata = database.get_file(file_id)
+    # Find file by token (enforces that caller must know the share token)
+    filename, metadata = database.find_by_token(token)
 
-    if not encrypted_data or not metadata:
+    if not filename or not metadata:
         return jsonify({"success": False, "message": "❌ File not found."}), 404
+
+    # Get encrypted data from DB
+    encrypted_data, _ = database.get_file(filename)
+
+    if not encrypted_data:
+        return jsonify({"success": False, "message": "❌ File content missing."}), 404
 
     if metadata.get("deleted_at"):
         return jsonify({"success": False, "message": "❌ File has been deleted."}), 410
@@ -625,7 +627,7 @@ def download_package(file_id):
         download_filename = f"{safe_name}_encrypted.html"
 
         # Increment download counter (email packages count as downloads too)
-        increment_download_count(file_id)
+        increment_download_count(filename)
 
         return send_file(
             BytesIO(html_content.encode("utf-8")),
