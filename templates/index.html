@@ -15,7 +15,7 @@
     />
     <link
       rel="stylesheet"
-      href="{{ url_for('static', filename='css/styles.css') }}?v=2"
+      href="{{ url_for('static', filename='css/styles.css') }}?v=3"
     />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
@@ -102,6 +102,7 @@
                 type="button"
                 id="clear-file"
                 class="btn btn-sm btn-outline-danger ms-2"
+                aria-label="Clear selected file"
                 >✕</button
               >
             </div>
@@ -418,6 +419,6 @@
       defer
       src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
     ></script>
-    <script src="{{ url_for('static', filename='js/script.js') }}?v=2"></script>
+    <script src="{{ url_for('static', filename='js/script.js') }}?v=3"></script>
   </body>
 </html>

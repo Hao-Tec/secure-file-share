@@ -528,7 +528,7 @@ async function loadFiles() {
                         <div class="file-cell">
                             <span class="file-icon">${icon}</span>
                             <span class="file-name" role="button" tabindex="0" data-tooltip="${escapeHtml(file.name)}">${escapeHtml(displayName)}</span>
-                            <button class="btn btn-sm btn-link copy-btn p-0" title="Copy filename">📋</button>
+                            <button class="btn btn-sm btn-link copy-btn p-0" aria-label="Copy filename" title="Copy filename">📋</button>
                         </div>
                     </td>
                     <td>${formatFileSize(file.size)}</td>
@@ -536,18 +536,29 @@ async function loadFiles() {
                     <td><span class="badge ${file.expires_in === 'Expired' ? 'bg-danger' : 'bg-warning text-dark'}">${file.expires_in || 'Unknown'}</span></td>
                     <td>
                         <div class="action-btns">
-                            ${getShareToken(file.file_id) ? `<button class="btn btn-sm btn-outline-info share-btn" data-token="${escapeHtml(getShareToken(file.file_id))}" title="Copy share link">🔗</button>` : '<span class="action-placeholder"></span>'}
-                            <button class="btn btn-sm btn-outline-primary email-pkg-btn" data-fileid="${escapeHtml(file.file_id)}" data-displayname="${escapeHtml(file.name)}" title="Download for Email">📧</button>
-                            <button class="btn btn-sm btn-outline-danger delete-btn" data-fileid="${escapeHtml(file.file_id)}" data-displayname="${escapeHtml(file.name)}" title="Delete file">🗑️</button>
+                            ${getShareToken(file.file_id) ? `<button class="btn btn-sm btn-outline-info share-btn" aria-label="Copy share link" data-token="${escapeHtml(getShareToken(file.file_id))}" title="Copy share link">🔗</button>` : '<span class="action-placeholder"></span>'}
+                            <button class="btn btn-sm btn-outline-primary email-pkg-btn" aria-label="Download for Email" data-fileid="${escapeHtml(file.file_id)}" data-displayname="${escapeHtml(file.name)}" title="Download for Email">📧</button>
+                            <button class="btn btn-sm btn-outline-danger delete-btn" aria-label="Delete file" data-fileid="${escapeHtml(file.file_id)}" data-displayname="${escapeHtml(file.name)}" title="Delete file">🗑️</button>
                         </div>
                     </td>
                 `;
                 
                 // Click filename to fill download form
-                row.querySelector('.file-name')?.addEventListener('click', () => {
+                const fileNameEl = row.querySelector('.file-name');
+                const fillForm = () => {
                     document.getElementById('filename').value = file.name;
                     document.getElementById('password_dl')?.focus();
                     showToast('📝 Filename copied to download form!', true);
+                };
+
+                fileNameEl?.addEventListener('click', fillForm);
+
+                // Keyboard support for filename
+                fileNameEl?.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        fillForm();
+                    }
                 });
                 
                 // Copy filename button
