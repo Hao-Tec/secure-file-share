@@ -494,6 +494,13 @@ def list_files():
 
 
 @app.route("/api/files/<file_id>", methods=["DELETE", "POST"])
+@limiter.limit(
+    "10 per hour",
+    error_message="Too many deletion attempts. Please wait.",
+)
+@limiter.limit(
+    "3 per minute", error_message="Please wait a moment before trying again."
+)
 def delete_file(file_id):
     """Delete an encrypted file and its metadata (requires password)."""
     # file_id comes from the UI list "file_id" field.
