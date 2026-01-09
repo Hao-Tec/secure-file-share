@@ -2,7 +2,7 @@
 import os
 import json
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional, Tuple, List, Dict, Any
 
 import psycopg2
@@ -10,6 +10,9 @@ from psycopg2.extras import RealDictCursor
 
 # Global DB connection string
 DATABASE_URL = os.environ.get("DATABASE_URL")
+
+# Throttle cleanup operations to avoid excessive DB writes
+_last_cleanup = datetime.min
 
 
 @contextmanager
@@ -167,13 +170,28 @@ def find_by_token(token: str) -> Tuple[Optional[str], Optional[Dict[str, Any]]]:
 
 
 def cleanup_expired() -> int:
-    """Remove expired files from the database."""
+    """Remove expired files from the database.
+
+    Throttled to run at most once every 60 seconds to prevent
+    excessive write operations on read-heavy endpoints.
+    """
+    global _last_cleanup
+
+    # Check if we should run cleanup (throttle)
+    # Use datetime.now() instead of utcnow() to be future-proof,
+    # but we only care about relative time here.
+    now_check = datetime.utcnow()
+    if (now_check - _last_cleanup) < timedelta(seconds=60):
+        return 0
+
+    _last_cleanup = now_check
+
     with db_cursor() as cur:
-        now = datetime.utcnow().isoformat() + "Z"
+        now_str = now_check.isoformat() + "Z"
         cur.execute("""
             DELETE FROM encrypted_files
             WHERE metadata->>'expires_at' < %s
-        """, (now,))
+        """, (now_str,))
         return cur.rowcount
 
 
