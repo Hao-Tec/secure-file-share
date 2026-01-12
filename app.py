@@ -455,12 +455,22 @@ def download_file(token):
 def list_files():
     """List all encrypted files with metadata."""
     try:
-        # Trigger expired cleanup
-        database.cleanup_expired()
+        # Probabilistic cleanup: 5% chance to run cleanup
+        # This prevents locking the table on every read request
+        import random
+        if random.random() < 0.05:
+            try:
+                database.cleanup_expired()
+            except Exception as e:
+                app.logger.warning("Cleanup failed: %s", e)
 
         files = []
+        # Get current time for DB filtering
+        now = datetime.utcnow().isoformat() + "Z"
+
         # Get all files from DB (now includes _file_size from LENGTH() query)
-        db_files = database.list_files()
+        # Optimized: Filters expired files in SQL and sorts by expiry
+        db_files = database.list_files(now_iso=now)
 
         for file_id, metadata in db_files:
             if not metadata:
@@ -481,8 +491,8 @@ def list_files():
             }
             files.append(file_info)
 
-        # Sort by expiry time (most remaining time first)
-        files.sort(key=lambda x: x["expires_in"], reverse=True)
+        # Sorting is now handled by the Database via index!
+        # This saves CPU and fixes lexicographical sorting bugs with time strings
 
         return jsonify({"success": True, "files": files})
     except Exception as e:

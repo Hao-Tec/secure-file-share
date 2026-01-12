@@ -55,6 +55,7 @@ SCHEMA_SQL = """
 
     CREATE INDEX IF NOT EXISTS idx_file_id ON encrypted_files(file_id);
     CREATE INDEX IF NOT EXISTS idx_share_token ON encrypted_files((metadata->>'share_token'));
+    CREATE INDEX IF NOT EXISTS idx_expires_at ON encrypted_files((metadata->>'expires_at'));
 """
 
 
@@ -132,16 +133,27 @@ def mark_as_deleted(filename: str) -> bool:
     return True
 
 
-def list_files() -> List[Tuple[str, Dict[str, Any]]]:
-    """List all ACTIVE files with their sizes. Excludes soft-deleted files."""
+def list_files(now_iso: str = None) -> List[Tuple[str, Dict[str, Any]]]:
+    """List all ACTIVE files with their sizes. Excludes soft-deleted files and expired files."""
     with db_cursor() as cur:
-        # Include LENGTH() to avoid N+1 query for file sizes
-        cur.execute("""
+        query = """
             SELECT file_id, metadata, LENGTH(encrypted_data) as file_size
             FROM encrypted_files
             WHERE NOT (metadata ? 'deleted_at')
-        """)
+        """
+        params = []
+
+        # Filter expired files directly in SQL if current time is provided
+        if now_iso:
+            query += " AND (metadata->>'expires_at' > %s)"
+            params.append(now_iso)
+
+        # Sort by expiry time descending (DB index optimization)
+        query += " ORDER BY metadata->>'expires_at' DESC"
+
+        cur.execute(query, tuple(params))
         results = cur.fetchall()
+
         # Return file_id, metadata with size embedded
         files = []
         for row in results:
