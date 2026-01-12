@@ -103,7 +103,7 @@ function getTooltipText(element) {
 }
 
 // Event delegation for custom tooltips on elements with data-tooltip OR title
-document.addEventListener('mouseenter', (e) => {
+const handleTooltipShow = (e) => {
     const target = e.target.closest('[data-tooltip], [title]');
     if (target) {
         const text = getTooltipText(target);
@@ -112,14 +112,20 @@ document.addEventListener('mouseenter', (e) => {
             showCustomTooltip(target, text);
         }
     }
-}, true);
+};
 
-document.addEventListener('mouseleave', (e) => {
+const handleTooltipHide = (e) => {
     const target = e.target.closest('[data-tooltip]');
     if (target) {
         hideCustomTooltip();
     }
-}, true);
+};
+
+document.addEventListener('mouseenter', handleTooltipShow, true);
+document.addEventListener('focusin', handleTooltipShow, true);
+
+document.addEventListener('mouseleave', handleTooltipHide, true);
+document.addEventListener('focusout', handleTooltipHide, true);
 
 // Safety listeners - hide tooltip on scroll, blur, or Escape key
 window.addEventListener('scroll', hideCustomTooltip, true);
