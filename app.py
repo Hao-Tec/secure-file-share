@@ -3,6 +3,7 @@
 import os
 import re
 import uuid
+import secrets
 from datetime import datetime, timedelta
 from io import BytesIO
 from typing import Tuple
@@ -80,7 +81,8 @@ except Exception as e:
 
 def create_metadata(original_filename: str) -> dict:
     """Create metadata for a newly uploaded file."""
-    share_token = uuid.uuid4().hex[:12]  # 12 char share token
+    # Use 16 bytes (128 bits) of entropy for the share token
+    share_token = secrets.token_urlsafe(16)
     now = datetime.utcnow()
     expires = now + timedelta(days=FILE_EXPIRY_DAYS)
 
