@@ -15,10 +15,13 @@ DATABASE_URL = os.environ.get("DATABASE_URL")
 @contextmanager
 def db_cursor():
     """Context manager for database operations with auto commit/rollback."""
-    if not DATABASE_URL:
+    if not DATABASE_URL and not os.environ.get("DATABASE_URL"):
         raise ValueError("DATABASE_URL environment variable is not set")
 
-    conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+    # Re-fetch in case it was set after import (for tests)
+    conn_str = DATABASE_URL or os.environ.get("DATABASE_URL")
+
+    conn = psycopg2.connect(conn_str, cursor_factory=RealDictCursor)
     cur = conn.cursor()
     try:
         yield cur
@@ -37,9 +40,10 @@ def get_db_connection():
     Note: Prefer using db_cursor() context manager for most operations.
     This function is kept for compatibility with health checks.
     """
-    if not DATABASE_URL:
+    conn_str = DATABASE_URL or os.environ.get("DATABASE_URL")
+    if not conn_str:
         raise ValueError("DATABASE_URL environment variable is not set")
-    return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+    return psycopg2.connect(conn_str, cursor_factory=RealDictCursor)
 
 
 # Shared schema - can be imported by reset_db.py
@@ -55,12 +59,13 @@ SCHEMA_SQL = """
 
     CREATE INDEX IF NOT EXISTS idx_file_id ON encrypted_files(file_id);
     CREATE INDEX IF NOT EXISTS idx_share_token ON encrypted_files((metadata->>'share_token'));
+    CREATE INDEX IF NOT EXISTS idx_expires_at ON encrypted_files((metadata->>'expires_at'));
 """
 
 
 def init_db() -> None:
     """Initialize the database schema."""
-    if not DATABASE_URL:
+    if not DATABASE_URL and not os.environ.get("DATABASE_URL"):
         return
 
     with db_cursor() as cur:
@@ -136,10 +141,12 @@ def list_files() -> List[Tuple[str, Dict[str, Any]]]:
     """List all ACTIVE files with their sizes. Excludes soft-deleted files."""
     with db_cursor() as cur:
         # Include LENGTH() to avoid N+1 query for file sizes
+        # Sort by expires_at DESC (most time remaining first) at DB level
         cur.execute("""
             SELECT file_id, metadata, LENGTH(encrypted_data) as file_size
             FROM encrypted_files
             WHERE NOT (metadata ? 'deleted_at')
+            ORDER BY metadata->>'expires_at' DESC
         """)
         results = cur.fetchall()
         # Return file_id, metadata with size embedded
