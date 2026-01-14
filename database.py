@@ -55,6 +55,7 @@ SCHEMA_SQL = """
 
     CREATE INDEX IF NOT EXISTS idx_file_id ON encrypted_files(file_id);
     CREATE INDEX IF NOT EXISTS idx_share_token ON encrypted_files((metadata->>'share_token'));
+    CREATE INDEX IF NOT EXISTS idx_expires_at ON encrypted_files((metadata->>'expires_at'));
 """
 
 
