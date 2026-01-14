@@ -3,6 +3,7 @@
 import os
 import re
 import uuid
+import random
 from datetime import datetime, timedelta
 from io import BytesIO
 from typing import Tuple
@@ -452,11 +453,13 @@ def download_file(token):
 
 
 @app.route("/api/files", methods=["GET"])
+@limiter.limit("30 per minute")
 def list_files():
     """List all encrypted files with metadata."""
     try:
-        # Trigger expired cleanup
-        database.cleanup_expired()
+        # Trigger expired cleanup (probabilistic: 5% chance)
+        if random.random() < 0.05:
+            database.cleanup_expired()
 
         files = []
         # Get all files from DB (now includes _file_size from LENGTH() query)
