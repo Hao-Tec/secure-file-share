@@ -1119,3 +1119,80 @@ footer small {
   border-left: 1px solid rgba(0, 0, 0, 0.1);
   border-top: 1px solid rgba(0, 0, 0, 0.1);
 }
+/* Append new utility classes */
+
+/* Hiding */
+.d-none {
+  display: none !important;
+}
+
+/* Widths */
+.w-0 {
+  width: 0%;
+}
+
+/* Specific component styles previously inline */
+.upload-card-wrapper {
+  max-width: 500px;
+}
+
+.password-warning-container {
+    background: #2d1b1b;
+    border: 2px solid #dc2626;
+    border-radius: 16px;
+    padding: 40px;
+    max-width: 500px;
+    text-align: center;
+}
+
+.password-warning-icon {
+    font-size: 64px;
+    margin-bottom: 20px;
+}
+
+.password-warning-title {
+    color: #fca5a5;
+    margin-bottom: 16px;
+}
+
+.password-warning-text {
+    color: #fecaca;
+    line-height: 1.6;
+}
+
+.password-warning-subtext {
+    color: #888;
+    margin-top: 20px;
+    font-size: 0.8rem;
+}
+
+.files-list-hidden {
+    display: none;
+}
+
+.mb-10px {
+    margin-bottom: 10px;
+}
+
+.flex-wrap-gap-8 {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.btn-small-padding {
+    padding: 6px 14px;
+    font-size: 0.85rem;
+}
+
+.flex-align-gap-10 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.btn-tiny-padding {
+    padding: 4px 12px;
+    font-size: 0.8rem;
+}

@@ -864,21 +864,35 @@ function showUploadSuccessActions(shareUrl, filename, fileId, password) {
     toast.className = 'custom-toast success';
     toast.style.animation = 'slideIn 0.4s ease';
     toast.style.maxWidth = '400px';
-    toast.innerHTML = `
-        <div style="margin-bottom: 10px;">
-            <strong title="${filename}">🎉 ${displayName}</strong>
-        </div>
-        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-            <button class="btn btn-sm btn-primary copy-link-btn" style="padding: 6px 14px; font-size: 0.85rem;">
-                📋 Copy Share Link
-            </button>
-            ${fileId && password ? `
-            <button class="btn btn-sm btn-outline-primary email-pkg-btn-quick" style="padding: 6px 14px; font-size: 0.85rem;">
-                📧 Email Package
-            </button>
-            ` : ''}
-        </div>
-    `;
+
+    // Create toast content via DOM to avoid inline styles in innerHTML string
+    // <div class="mb-10px">
+    const headerDiv = document.createElement('div');
+    headerDiv.className = 'mb-10px';
+    const strong = document.createElement('strong');
+    strong.title = filename;
+    strong.textContent = `🎉 ${displayName}`;
+    headerDiv.appendChild(strong);
+    toast.appendChild(headerDiv);
+
+    // <div class="flex-wrap-gap-8">
+    const buttonsDiv = document.createElement('div');
+    buttonsDiv.className = 'flex-wrap-gap-8';
+
+    // Copy button
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'btn btn-sm btn-primary copy-link-btn btn-small-padding';
+    copyBtn.textContent = '📋 Copy Share Link';
+    buttonsDiv.appendChild(copyBtn);
+
+    // Email button
+    if (fileId && password) {
+        const emailBtn = document.createElement('button');
+        emailBtn.className = 'btn btn-sm btn-outline-primary email-pkg-btn-quick btn-small-padding';
+        emailBtn.textContent = '📧 Email Package';
+        buttonsDiv.appendChild(emailBtn);
+    }
+    toast.appendChild(buttonsDiv);
     
     container.appendChild(toast);
     
@@ -961,14 +975,22 @@ async function showEmailDownloadOption(fileId, filename, password) {
     const toast = document.createElement('div');
     toast.className = 'custom-toast success';
     toast.style.animation = 'slideIn 0.4s ease';
-    toast.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-            <span>📧 Want to share via email?</span>
-            <button class="btn btn-sm btn-primary email-quick-download" style="padding: 4px 12px; font-size: 0.8rem;">
-                Download Package
-            </button>
-        </div>
-    `;
+
+    // Create content via DOM
+    // <div class="flex-align-gap-10">
+    const wrapper = document.createElement('div');
+    wrapper.className = 'flex-align-gap-10';
+
+    const span = document.createElement('span');
+    span.textContent = '📧 Want to share via email?';
+    wrapper.appendChild(span);
+
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-sm btn-primary email-quick-download btn-tiny-padding';
+    btn.textContent = 'Download Package';
+    wrapper.appendChild(btn);
+
+    toast.appendChild(wrapper);
     
     container.appendChild(toast);
     
@@ -1080,17 +1102,28 @@ function updatePasswordStrength(password) {
     const labels = ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong'];
     const classes = ['very-weak', 'weak', 'fair', 'good', 'strong'];
     
-    let html = `<div class="strength-bar ${classes[strength - 1] || classes[0]}">
-        <div class="strength-fill" style="width: ${strength * 20}%"></div>
-    </div>
-    <small class="strength-text ${classes[strength - 1] || classes[0]}">${labels[strength - 1] || labels[0]}`;
+    // Use DOM methods instead of innerHTML with style strings to be CSP compliant
+    // Clear previous
+    strengthIndicator.innerHTML = '';
+
+    const barDiv = document.createElement('div');
+    barDiv.className = `strength-bar ${classes[strength - 1] || classes[0]}`;
+
+    const fillDiv = document.createElement('div');
+    fillDiv.className = 'strength-fill';
+    fillDiv.style.width = `${strength * 20}%`; // Allowed by CSP (DOM property)
+    barDiv.appendChild(fillDiv);
+
+    const textSmall = document.createElement('small');
+    textSmall.className = `strength-text ${classes[strength - 1] || classes[0]}`;
+    textSmall.textContent = labels[strength - 1] || labels[0];
     
     if (feedback.length > 0) {
-        html += ` - Missing: ${feedback.join(', ')}`;
+        textSmall.textContent += ` - Missing: ${feedback.join(', ')}`;
     }
-    html += '</small>';
     
-    strengthIndicator.innerHTML = html;
+    strengthIndicator.appendChild(barDiv);
+    strengthIndicator.appendChild(textSmall);
 }
 
 function resetPasswordStrength() {
