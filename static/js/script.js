@@ -104,6 +104,9 @@ function getTooltipText(element) {
 
 // Event delegation for custom tooltips on elements with data-tooltip OR title
 document.addEventListener('mouseenter', (e) => {
+    // Ensure closest exists (e.g. document doesn't have it)
+    if (!e.target.closest) return;
+
     const target = e.target.closest('[data-tooltip], [title]');
     if (target) {
         const text = getTooltipText(target);
@@ -115,6 +118,8 @@ document.addEventListener('mouseenter', (e) => {
 }, true);
 
 document.addEventListener('mouseleave', (e) => {
+    if (!e.target.closest) return;
+
     const target = e.target.closest('[data-tooltip]');
     if (target) {
         hideCustomTooltip();
@@ -528,7 +533,7 @@ async function loadFiles() {
                         <div class="file-cell">
                             <span class="file-icon">${icon}</span>
                             <span class="file-name" role="button" tabindex="0" data-tooltip="${escapeHtml(file.name)}">${escapeHtml(displayName)}</span>
-                            <button class="btn btn-sm btn-link copy-btn p-0" title="Copy filename">📋</button>
+                            <button class="btn btn-sm btn-link copy-btn p-0" title="Copy filename" aria-label="Copy filename: ${escapeAttr(file.name)}">📋</button>
                         </div>
                     </td>
                     <td>${formatFileSize(file.size)}</td>
@@ -536,9 +541,9 @@ async function loadFiles() {
                     <td><span class="badge ${file.expires_in === 'Expired' ? 'bg-danger' : 'bg-warning text-dark'}">${file.expires_in || 'Unknown'}</span></td>
                     <td>
                         <div class="action-btns">
-                            ${getShareToken(file.file_id) ? `<button class="btn btn-sm btn-outline-info share-btn" data-token="${escapeHtml(getShareToken(file.file_id))}" title="Copy share link">🔗</button>` : '<span class="action-placeholder"></span>'}
-                            <button class="btn btn-sm btn-outline-primary email-pkg-btn" data-fileid="${escapeHtml(file.file_id)}" data-displayname="${escapeHtml(file.name)}" title="Download for Email">📧</button>
-                            <button class="btn btn-sm btn-outline-danger delete-btn" data-fileid="${escapeHtml(file.file_id)}" data-displayname="${escapeHtml(file.name)}" title="Delete file">🗑️</button>
+                            ${getShareToken(file.file_id) ? `<button class="btn btn-sm btn-outline-info share-btn" data-token="${escapeHtml(getShareToken(file.file_id))}" title="Copy share link" aria-label="Copy share link for ${escapeAttr(file.name)}">🔗</button>` : '<span class="action-placeholder"></span>'}
+                            <button class="btn btn-sm btn-outline-primary email-pkg-btn" data-fileid="${escapeHtml(file.file_id)}" data-displayname="${escapeHtml(file.name)}" title="Download for Email" aria-label="Download email package for ${escapeAttr(file.name)}">📧</button>
+                            <button class="btn btn-sm btn-outline-danger delete-btn" data-fileid="${escapeHtml(file.file_id)}" data-displayname="${escapeHtml(file.name)}" title="Delete file" aria-label="Delete ${escapeAttr(file.name)}">🗑️</button>
                         </div>
                     </td>
                 `;
@@ -596,7 +601,8 @@ async function loadFiles() {
         } else {
             if (emptyEl) emptyEl.style.display = 'block';
         }
-    } catch {
+    } catch (error) {
+        console.error('File list load error:', error);
         if (loadingEl) loadingEl.style.display = 'none';
         showToast('❌ Could not load file list.', false);
     }
@@ -1165,6 +1171,10 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+function escapeAttr(text) {
+    return text.replace(/"/g, '&quot;');
 }
 
 function getFileIcon(filename) {
