@@ -495,17 +495,20 @@ def list_files():
 
 @app.route("/api/files/<file_id>", methods=["DELETE", "POST"])
 def delete_file(file_id):
-    """Delete an encrypted file and its metadata (requires password)."""
+    """Delete an encrypted file and its metadata (requires password and share_token)."""
     # file_id comes from the UI list "file_id" field.
     # We stripped .enc in list_files, so we add it back to get the actual DB filename.
     if not file_id.endswith(".enc"):
         file_id += ".enc"
 
     password = ""
+    token = ""
     if request.is_json:
         password = request.json.get("password", "")
+        token = request.json.get("share_token", "")
     else:
         password = request.form.get("password", "")
+        token = request.form.get("share_token", "")
 
     if not password:
         return (
@@ -513,6 +516,24 @@ def delete_file(file_id):
                 {"success": False, "message": "❌ Password required to delete file."}
             ),
             400,
+        )
+
+    if not token:
+        return (
+            jsonify(
+                {"success": False, "message": "❌ Share token required for deletion."}
+            ),
+            403,
+        )
+
+    # Verify token matches file_id to prevent IDOR/Unauthorized deletion
+    token_filename, _ = database.find_by_token(token)
+    if token_filename != file_id:
+        return (
+            jsonify(
+                {"success": False, "message": "❌ Invalid share token for this file."}
+            ),
+            403,
         )
 
     # Retrieve from DB
@@ -553,13 +574,24 @@ def download_package(file_id):
         file_id += ".enc"
 
     password = ""
+    token = ""
     if request.is_json:
         password = request.json.get("password", "")
+        token = request.json.get("share_token", "")
     else:
         password = request.form.get("password", "")
+        token = request.form.get("share_token", "")
 
     if not password:
         return jsonify({"success": False, "message": "❌ Password required."}), 400
+
+    if not token:
+        return jsonify({"success": False, "message": "❌ Share token required."}), 403
+
+    # Verify token matches file_id
+    token_filename, _ = database.find_by_token(token)
+    if token_filename != file_id:
+        return jsonify({"success": False, "message": "❌ Invalid share token."}), 403
 
     # Get file from database
     encrypted_data, metadata = database.get_file(file_id)

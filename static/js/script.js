@@ -676,6 +676,8 @@ deleteConfirmBtn?.addEventListener('click', async () => {
     // Show loading
     setButtonLoading(deleteConfirmBtn, true);
     
+    const token = getShareToken(currentDeleteFileId);
+
     try {
         const response = await fetch(`/api/files/${encodeURIComponent(currentDeleteFileId)}`, {
             method: 'DELETE',
@@ -683,7 +685,7 @@ deleteConfirmBtn?.addEventListener('click', async () => {
                 'X-CSRFToken': csrfToken,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ password: password })
+            body: JSON.stringify({ password: password, share_token: token })
         });
         const result = await response.json();
         
@@ -727,13 +729,14 @@ const emailPkgModalClose = document.querySelector('.email-pkg-close');
  */
 async function fetchAndDownloadEmailPackage(fileId, password, downloadFilename) {
     try {
+        const token = getShareToken(fileId);
         const response = await fetch(`/api/download-package/${encodeURIComponent(fileId)}`, {
             method: 'POST',
             headers: {
                 'X-CSRFToken': csrfToken,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ password: password })
+            body: JSON.stringify({ password: password, share_token: token })
         });
         
         const contentType = response.headers.get('content-type');
@@ -907,6 +910,8 @@ function showUploadSuccessActions(shareUrl, filename, fileId, password) {
         btn.textContent = '⏳ Generating...';
         btn.disabled = true;
         
+        const token = getShareToken(fileId);
+
         try {
             const response = await fetch(`/api/download-package/${encodeURIComponent(fileId)}`, {
                 method: 'POST',
@@ -914,7 +919,7 @@ function showUploadSuccessActions(shareUrl, filename, fileId, password) {
                     'X-CSRFToken': csrfToken,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ password: password })
+                body: JSON.stringify({ password: password, share_token: token })
             });
             
             const contentType = response.headers.get('content-type');
@@ -977,6 +982,8 @@ async function showEmailDownloadOption(fileId, filename, password) {
         toast.querySelector('.email-quick-download').textContent = '⏳ Generating...';
         toast.querySelector('.email-quick-download').disabled = true;
         
+        const token = getShareToken(fileId);
+
         try {
             const response = await fetch(`/api/download-package/${encodeURIComponent(fileId)}`, {
                 method: 'POST',
@@ -984,7 +991,7 @@ async function showEmailDownloadOption(fileId, filename, password) {
                     'X-CSRFToken': csrfToken,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ password: password })
+                body: JSON.stringify({ password: password, share_token: token })
             });
             
             const contentType = response.headers.get('content-type');
