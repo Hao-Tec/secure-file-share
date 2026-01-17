@@ -527,8 +527,8 @@ async function loadFiles() {
                     <td>
                         <div class="file-cell">
                             <span class="file-icon">${icon}</span>
-                            <span class="file-name" role="button" tabindex="0" data-tooltip="${escapeHtml(file.name)}">${escapeHtml(displayName)}</span>
-                            <button class="btn btn-sm btn-link copy-btn p-0" title="Copy filename">📋</button>
+                            <span class="file-name" role="button" tabindex="0" data-tooltip="${escapeAttr(file.name)}" aria-label="Select ${escapeAttr(file.name)}">${escapeHtml(displayName)}</span>
+                            <button class="btn btn-sm btn-link copy-btn p-0" title="Copy filename" aria-label="Copy filename ${escapeAttr(file.name)}">📋</button>
                         </div>
                     </td>
                     <td>${formatFileSize(file.size)}</td>
@@ -536,19 +536,30 @@ async function loadFiles() {
                     <td><span class="badge ${file.expires_in === 'Expired' ? 'bg-danger' : 'bg-warning text-dark'}">${file.expires_in || 'Unknown'}</span></td>
                     <td>
                         <div class="action-btns">
-                            ${getShareToken(file.file_id) ? `<button class="btn btn-sm btn-outline-info share-btn" data-token="${escapeHtml(getShareToken(file.file_id))}" title="Copy share link">🔗</button>` : '<span class="action-placeholder"></span>'}
-                            <button class="btn btn-sm btn-outline-primary email-pkg-btn" data-fileid="${escapeHtml(file.file_id)}" data-displayname="${escapeHtml(file.name)}" title="Download for Email">📧</button>
-                            <button class="btn btn-sm btn-outline-danger delete-btn" data-fileid="${escapeHtml(file.file_id)}" data-displayname="${escapeHtml(file.name)}" title="Delete file">🗑️</button>
+                            ${getShareToken(file.file_id) ? `<button class="btn btn-sm btn-outline-info share-btn" data-token="${escapeHtml(getShareToken(file.file_id))}" title="Copy share link" aria-label="Copy share link for ${escapeAttr(file.name)}">🔗</button>` : '<span class="action-placeholder"></span>'}
+                            <button class="btn btn-sm btn-outline-primary email-pkg-btn" data-fileid="${escapeHtml(file.file_id)}" data-displayname="${escapeHtml(file.name)}" title="Download for Email" aria-label="Download email package for ${escapeAttr(file.name)}">📧</button>
+                            <button class="btn btn-sm btn-outline-danger delete-btn" data-fileid="${escapeHtml(file.file_id)}" data-displayname="${escapeHtml(file.name)}" title="Delete file" aria-label="Delete file ${escapeAttr(file.name)}">🗑️</button>
                         </div>
                     </td>
                 `;
                 
                 // Click filename to fill download form
-                row.querySelector('.file-name')?.addEventListener('click', () => {
-                    document.getElementById('filename').value = file.name;
-                    document.getElementById('password_dl')?.focus();
-                    showToast('📝 Filename copied to download form!', true);
-                });
+                const fileNameEl = row.querySelector('.file-name');
+                if (fileNameEl) {
+                    const clickHandler = () => {
+                        document.getElementById('filename').value = file.name;
+                        document.getElementById('password_dl')?.focus();
+                        showToast('📝 Filename copied to download form!', true);
+                    };
+
+                    fileNameEl.addEventListener('click', clickHandler);
+                    fileNameEl.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            clickHandler();
+                        }
+                    });
+                }
                 
                 // Copy filename button
                 row.querySelector('.copy-btn')?.addEventListener('click', async () => {
@@ -1165,6 +1176,11 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+function escapeAttr(text) {
+    if (!text) return '';
+    return text.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
 }
 
 function getFileIcon(filename) {
