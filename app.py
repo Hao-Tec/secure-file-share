@@ -481,8 +481,8 @@ def list_files():
             }
             files.append(file_info)
 
-        # Sort by expiry time (most remaining time first)
-        files.sort(key=lambda x: x["expires_in"], reverse=True)
+        # Sorting is now handled by the database (ORDER BY metadata->>'expires_at' DESC)
+        # files.sort(key=lambda x: x["expires_in"], reverse=True)
 
         return jsonify({"success": True, "files": files})
     except Exception as e:
